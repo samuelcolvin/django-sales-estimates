@@ -17,8 +17,6 @@ import user_settings
 
 import SkeletalDisplay
 
-from pprint import pprint
-
 def index(request):
 	page_gen = PageGenerator(request)
 	return page_gen.index()
@@ -34,7 +32,6 @@ def display_item(request, app_name, model_name, item_id):
 class PageGenerator(object):
 	def __init__(self, request):
 		self._request = request
-		pprint(self._request.session['crums'])
 		self._apps = SkeletalDisplay.get_display_apps()
 	
 	def _set_model(self, app_name, model_name):
