@@ -1,0 +1,75 @@
+{% if data_url %}
+<ul id="java-menu">
+	{% for item in java_menu %}
+	<li>
+		<a onclick="{{item.jload}}" href="#">
+			{{item.name}}
+		</a>
+	</li>
+	{% endfor %}
+	<select id="channel-select">
+	{% for channel in channels %}
+	  <option value="{{channel.name}}" {% if channel.selected %}selected{% endif %}>{{channel.name}}</option>
+	{% endfor %}
+	</select>
+	<p><input id="percent-cb" type="checkbox">Percentage Change</p>
+</ul>
+<div id="chart-title">&nbsp;</div>
+<div id="legend">
+	<div class="legend-line">
+		<span class="legend-label">Date:</span>
+		<span id="legend-datetime" class="legend-value">&nbsp;</span>
+	</div>
+	<div class="legend-line">
+		<span class="legend-label">Value:</span>
+		<span id="legend-value" class="legend-value">&nbsp;</span>
+	</div>
+	<div class="legend-line">
+		<span class="legend-label">Source:</span>
+		<span id="legend-source" class="legend-value">&nbsp;</span>
+	</div>
+	<div class="legend-line">
+		<span class="legend-label">Date Recorded:</span>
+		<span id="legend-get_date" class="legend-value">&nbsp;</span>
+	</div>
+	<div class="legend-line">
+		<span class="legend-label">Time Exact:</span>
+		<span id="legend-exact_time" class="legend-value">&nbsp;</span>
+	</div>
+</div>
+<div id="chart-area">
+	<canvas id="base-canvas">&nbsp;</canvas>
+	<canvas id="overlay-canvas">&nbsp;</canvas>
+</div>
+<script type="application/javascript" src="{{ STATIC_URL }}js/d3.v2.js"></script>
+<script type="application/javascript" src="{{ STATIC_URL }}js/basic_plot.js"></script>
+<script type="application/javascript">
+	var source_names = {{ sources | safe }};
+	var currency = '{{ units }}';
+	var csv_file = '{{ data_url }}';
+	var channel_names = {{ channel_names | safe }};
+	$(document).ready(start);
+</script>
+{% endif %}
+<div class="list-area">
+	{% for group in status_groups %}
+		<h4>{{group.title}}</h4>
+		{% for item in group.fields %}
+		<div class="list-box">
+			<div class="list-item-name">
+				{{item.name}}:
+			</div>
+			<div class="list-item-state">
+				{{item.state|safe}}
+			</div>
+		</div>
+		{% endfor %}
+	{% endfor %}
+</div>
+{% if tables_below %}
+{% load render_table from django_tables2 %}
+{% for table in tables_below %}
+<h3>{{table.title}}</h3>
+{% render_table table.renderable %}
+{% endfor %}
+{% endif%}

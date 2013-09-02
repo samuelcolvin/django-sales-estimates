@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>{{title}}</title>
+		<link rel="icon" type="image/png" href="{{ STATIC_URL }}favicon.png" />
+		<link rel="stylesheet" href="{{ STATIC_URL }}style.css?">
+		{% if data_url %}
+		<link rel="stylesheet" href="{{ STATIC_URL }}nv.d3.css">
+		<link rel="stylesheet" href="{{ STATIC_URL }}plot.css">
+		{% endif%}
+		<script type="application/javascript" src="{{ STATIC_URL }}js/jquery-1.9.1.min.js"></script>
+		<script type="application/javascript" src="{{ STATIC_URL }}js/general.js?"></script>
+		{% if full_width %}
+			<script type="application/javascript">
+				document.addEventListener('DOMContentLoaded', set_full_width);
+			</script>
+		{% endif%}
+	</head>
+	<body>
+		<div class="top-strip top-grad">
+			<h1><a href="{% url "index" %}">{{site_title}}</a></h1>
+			<ul id="top-left" class="top-grad">
+				{% for item in menu %}
+				<li class="{{item.class}}">
+					<a href="{{item.url}}">{{item.name}}</a>
+				</li>
+				{% endfor %}
+			</ul>
+			<ul id="top-right" class="top-grad">
+				{% for item in top_menu %}
+				<li>
+					<a href="{{item.url}}">{{item.name}}</a>
+				</li>
+				{% endfor %}
+			</ul>
+		</div>
+		<div id="content-area">
+			<span id="crums"> <a href="{% url "index" %}">Home</a> {% for item in crums %}
+				>> <a href="{{item.url}}">{{item.name}}</a> {% endfor %} </span>
+			<div id="content">
+				<div id="page-menu">
+					<ul>
+						{% for item in page_menu %}
+						<li>
+							{% if item.url %}<a href="{{item.url}}">{% endif %}
+							<button {% if item.onclick %} onclick="{{item.onclick}}"{% endif %}>{{item.name}}</button>
+							{% if item.url %}</a>{% endif %}
+						</li>
+						{% endfor %}
+					</ul>
+				</div>
+				{% include content_template %}
+			</div>
+		</div>
+	</body>
+</html>
