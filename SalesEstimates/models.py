@@ -12,16 +12,22 @@ class BasicModel(models.Model):
     
     class Meta:
         abstract = True
-        
-class Component(BasicModel):
-    minimum_order = models.IntegerField(default=0)
+    
+class OrderGroup(BasicModel):
+    comment = models.TextField(null=True, blank=True)
     nominal_price = models.DecimalField('Nominal cost per unit', max_digits=6, decimal_places=2, null=True)
+    minimum_order = models.IntegerField(default=0)
+    lead_time = models.IntegerField('Lead Time (days)', default=0)
     
     def str_nominal_price(self):
         return '%s%0.2f' % (currency, self.nominal_price)
+        
+    class Meta:
+        verbose_name_plural = 'Order Groups'
+        verbose_name = 'Order Group'
     
 class CostLevel(models.Model):
-    component = models.ForeignKey(Component, related_name='costlevels')
+    order_group = models.ForeignKey(OrderGroup, related_name='costlevels')
     order_quantity = models.IntegerField(default=0)
     price = models.DecimalField('Price per unit', max_digits=6, decimal_places=2)
     
@@ -30,19 +36,31 @@ class CostLevel(models.Model):
     
     def save(self, *args, **kwargs):
         super(CostLevel, self).save(*args, **kwargs)
-        if self.component.costlevels.count() > 0:
-            min_cost_level = self.component.costlevels.order_by('order_quantity')[0]
+        if self.order_group.costlevels.count() > 0:
+            min_cost_level = self.order_group.costlevels.order_by('order_quantity')[0]
             if min_cost_level.order_quantity < self.order_quantity:
                 return
-        self.component.nominal_price = self.price
-        self.component.save()
+        self.order_group.nominal_price = self.price
+        self.order_group.save()
     
     def __unicode__(self):
-        return '%s cost: %0.2f @ %d units' % (self.component.name, self.price, self.order_quantity)
+        return '%s cost: %0.2f @ %d units' % (self.order_group.name, self.price, self.order_quantity)
+        
+class Component(BasicModel):
+    order_group = models.ForeignKey(OrderGroup, related_name='components')
     
-class Assembly(models.Model):
+    def str_nominal_price(self):
+        return self.order_group.str_nominal_price()
+        
+    class Meta:
+        verbose_name_plural = 'Components'
+        verbose_name = 'Component'
+    
+class Assembly(BasicModel):
     name = models.CharField(max_length=200)
+    size = models.CharField(max_length=200, null=True, blank=True)
     components = models.ManyToManyField(Component, related_name='assemblies')
+    
     
     def component_count(self):
         return self.components.count()
@@ -55,6 +73,10 @@ class Assembly(models.Model):
     
     def __unicode__(self):
         return self.name
+        
+    class Meta:
+        verbose_name_plural = 'Assemblies'
+        verbose_name = 'Assembly'
 
 class SKU(BasicModel):
     assemblies = models.ManyToManyField(Assembly, related_name='skus')
@@ -96,33 +118,53 @@ class CustomerSKU(models.Model):
     class Meta:
         verbose_name_plural = 'Customer SKUs'
         verbose_name = 'Customer SKU'
-    
+
 class SalesPeriod(models.Model):
     start_date = models.DateField()
     finish_date = models.DateField()
     customers = models.ManyToManyField(Customer, related_name='sales_periods', through='CustomerSalesPeriod')
     
+    def str_start(self):
+        return self.start_date.strftime(settings.CUSTOM_DATE_FORMAT)
+    
+    def str_finish(self):
+        return self.finish_date.strftime(settings.CUSTOM_DATE_FORMAT)
+    
+    def length_days(self):
+        return (self.finish_date - self.start_date).days
+    
     def __unicode__(self):
-        return '%s to %s' % (self.start_date.strftime(settings.CUSTOM_DATE_FORMAT),
-                             self.finish_date.strftime(settings.CUSTOM_DATE_FORMAT))
+        return '%s to %s, %d days' % (self.str_start(), self.str_finish(), self.length_days())
 
+    class Meta:
+        verbose_name_plural = 'Sales Periods'
+        verbose_name = 'Sales Period'
+        
 class CustomerSalesPeriod(models.Model):
     customer = models.ForeignKey(Customer, related_name='c_sales_periods')
     period = models.ForeignKey(SalesPeriod, related_name='c_sales_periods')
     store_count = models.IntegerField(default=0)
     
-    def __unicode__(self):
-        return '%s for %s, %d stores' % (str(self.period), self.customer.name, self.store_count)
-
-class SKUSales(models.Model):
-    period = models.ForeignKey(CustomerSalesPeriod, related_name='sku_sales_estimates')
-    sku = models.ForeignKey(SKU, related_name='sku_sales_estimates')
-    sales = models.IntegerField(default=0)
+    def str_period(self):
+        return '%s to %s' % (self.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT),
+                             self.period.finish_date.strftime(settings.CUSTOM_DATE_FORMAT))
     
     def __unicode__(self):
-        return '%s sells %d at %s during %s' % (self.sku.name, self.sales, self.period.customer.name,  
-                                            str(self.period))
-        
+        return 'period from %s for %s, %d stores' % (self.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT),
+                                                      self.customer.name, self.store_count)
+
+class SKUSales(models.Model):
+    period = models.ForeignKey(CustomerSalesPeriod, related_name='sku_sales')
+    csku = models.ForeignKey(CustomerSKU, related_name='sku_sale')
+    sales = models.IntegerField(default=0)
+    
+    def sku_name(self):
+        return self.csku.sku_name()
+    
+    def __unicode__(self):
+        return '%s sells %d at %s starting %s' % (self.sku_name(), self.sales, self.period.customer.name,  
+                                            self.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT))
+    
     class Meta:
         verbose_name_plural = 'SKU Sales'
         verbose_name = 'SKU Sales'

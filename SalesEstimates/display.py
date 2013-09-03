@@ -5,17 +5,17 @@ import json, base64
 import SkeletalDisplay
 import SalesEstimates.models as m
 
-class Component(SkeletalDisplay.ModelDisplay):
+class OrderGroup(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[('Nominal Price','str_nominal_price')]
 	attached_tables = [{'name':'CostLevel', 'populate':'costlevels', 'title':'Cost Levels'},
-					{'name':'Assembly', 'populate':'assemblies', 'title':'Assemblies Using this Component'}]
-	index = 1
+					{'name':'Component', 'populate':'components', 'title':'Components with this Order Group'}]
+	index = 0
 	
 	class Table(tables.Table):
-		name = tables.LinkColumn('display_item', args=['SalesEstimates', 'Component', A('pk')])
+		name = tables.LinkColumn('display_item', args=['SalesEstimates', 'OrderGroup', A('pk')])
 		str_nominal_price = tables.Column(verbose_name='Nominal Price')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			model = m.Component
+			model = m.OrderGroup
 			exclude = ('id', 'description', 'nominal_price')
 
 class CostLevel(SkeletalDisplay.ModelDisplay):
@@ -28,6 +28,17 @@ class CostLevel(SkeletalDisplay.ModelDisplay):
 			model = m.CostLevel
 			exclude = ('id', 'component', 'price')
 
+class Component(SkeletalDisplay.ModelDisplay):
+	extra_funcs=[('Nominal Price','str_nominal_price')]
+	attached_tables = [{'name':'Assembly', 'populate':'assemblies', 'title':'Assemblies Using this Component'}]
+	index = 1
+	
+	class Table(tables.Table):
+		name = tables.LinkColumn('display_item', args=['SalesEstimates', 'Component', A('pk')])
+		str_nominal_price = tables.Column(verbose_name='Nominal Price')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			model = m.Component
+			exclude = ('id', 'description', 'nominal_price')
 
 class Assembly(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[('Nominal Raw Cost','str_nominal_raw_cost'), ('Components', 'component_count')]
@@ -57,7 +68,8 @@ class SKU(SkeletalDisplay.ModelDisplay):
 
 class Customer(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[('SKUs', 'sku_count')]
-	attached_tables = [{'name':'CustomerSKU', 'populate':'c_skus', 'title':'SKUs Sold'}]
+	attached_tables = [{'name':'CustomerSKU', 'populate':'c_skus', 'title':'SKUs Sold'},
+					{'name':'CustomerSalesPeriod', 'populate':'c_sales_periods', 'title':'Sales Periods'}]
 	index = 4
 	
 	class Table(tables.Table):
@@ -67,12 +79,51 @@ class Customer(SkeletalDisplay.ModelDisplay):
 			model = m.Customer
 			exclude = ('id', 'description')
 
-class CustomerSKU(SkeletalDisplay.ModelDisplay):
+class SalesPeriod(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[]
+	attached_tables = [{'name':'CustomerSalesPeriod', 'table': 'Table2', 'populate':'c_sales_periods', 'title':'Customers'}]
+	index = 5
+	
+	class Table(tables.Table):
+		str_start = tables.LinkColumn('display_item', args=['SalesEstimates', 'SalesPeriod', A('pk')],
+									verbose_name='Start Date')
+		str_finish = tables.Column(verbose_name='Finish Date')
+		length_days = tables.Column(verbose_name='Length in Days')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+
+class CustomerSKU(SkeletalDisplay.ModelDisplay):
 	display = False
 	
 	class Table(tables.Table):
 		sku_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'SKU', A('sku.pk')])
 		str_price = tables.Column(verbose_name='Price')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+
+class CustomerSalesPeriod(SkeletalDisplay.ModelDisplay):
+	display = False
+	attached_tables = [{'name':'SKUSales', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
+	
+	class Table(tables.Table):
+		str_period = tables.LinkColumn('display_item', args=['SalesEstimates', 'CustomerSalesPeriod', A('pk')],
+									verbose_name='Sales Period')
+		store_count = tables.Column(verbose_name='Store Count')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+	
+	class Table2(tables.Table):
+		customer = tables.LinkColumn('display_item', args=['SalesEstimates', 'CustomerSalesPeriod', A('pk')],
+									verbose_name='Customer')
+		store_count = tables.Column(verbose_name='Store Count')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+
+class SKUSales(SkeletalDisplay.ModelDisplay):
+	display = False
+	
+	class Table(tables.Table):
+		sku_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'CustomerSKU', A('sku.pk')])
+		slaes = tables.Column(verbose_name='Number of Sales')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass

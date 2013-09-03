@@ -4,12 +4,10 @@
 		<title>{{title}}</title>
 		<link rel="icon" type="image/png" href="{{ STATIC_URL }}favicon.png" />
 		<link rel="stylesheet" href="{{ STATIC_URL }}style.css?">
-		{% if data_url %}
-		<link rel="stylesheet" href="{{ STATIC_URL }}nv.d3.css">
-		<link rel="stylesheet" href="{{ STATIC_URL }}plot.css">
-		{% endif%}
+		{% if use_js %}
 		<script type="application/javascript" src="{{ STATIC_URL }}js/jquery-1.9.1.min.js"></script>
 		<script type="application/javascript" src="{{ STATIC_URL }}js/general.js?"></script>
+		{% endif%}
 		{% if full_width %}
 			<script type="application/javascript">
 				document.addEventListener('DOMContentLoaded', set_full_width);
@@ -38,6 +36,7 @@
 			<span id="crums"> <a href="{% url "index" %}">Home</a> {% for item in crums %}
 				>> <a href="{{item.url}}">{{item.name}}</a> {% endfor %} </span>
 			<div id="content">
+				{% if page_menu %}
 				<div id="page-menu">
 					<ul>
 						{% for item in page_menu %}
@@ -49,6 +48,12 @@
 						{% endfor %}
 					</ul>
 				</div>
+				{% endif %}
+				{% if message %}
+					<div id="message">
+						{{message|safe}}
+					</div>
+				{% endif %}
 				{% include content_template %}
 			</div>
 		</div>

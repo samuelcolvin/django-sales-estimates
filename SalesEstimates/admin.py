@@ -4,11 +4,16 @@ import SalesEstimates.models as m
 class CostLevelInline(admin.TabularInline):
     model = m.CostLevel
     extra = 5
-
-class ComponentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'minimum_order', 'nominal_price')
+    
+class OrderGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'minimum_order', 'str_nominal_price')
     inlines = [CostLevelInline]
     exclude = ('nominal_price',)
+    
+admin.site.register(m.OrderGroup, OrderGroupAdmin)
+
+class ComponentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'str_nominal_price')
     
 admin.site.register(m.Component, ComponentAdmin)
 
@@ -59,7 +64,7 @@ class CustomerSalesPeriodAdmin(admin.ModelAdmin):
 admin.site.register(m.CustomerSalesPeriod, CustomerSalesPeriodAdmin)
 
 class SKUSalesAdmin(admin.ModelAdmin):
-    list_display = ('sku', 'period', 'sales')
+    list_display = ('csku', 'period', 'sales')
     
 admin.site.register(m.SKUSales, SKUSalesAdmin)
 
