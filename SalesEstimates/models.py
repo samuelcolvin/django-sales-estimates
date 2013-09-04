@@ -1,11 +1,11 @@
 from django.db import models
 import settings
 
-currency = u'\u00A3'
-
 class BasicModel(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
+    comment = models.TextField(null=True, blank=True)
+    xl_id = models.IntegerField('Excel ID', default=-1)
     
     def __unicode__(self):
         return self.name
@@ -14,13 +14,12 @@ class BasicModel(models.Model):
         abstract = True
     
 class OrderGroup(BasicModel):
-    comment = models.TextField(null=True, blank=True)
-    nominal_price = models.DecimalField('Nominal cost per unit', max_digits=6, decimal_places=2, null=True)
+    nominal_price = models.DecimalField('Nominal price per unit', max_digits=6, decimal_places=2, null=True)
     minimum_order = models.IntegerField(default=0)
     lead_time = models.IntegerField('Lead Time (days)', default=0)
     
     def str_nominal_price(self):
-        return '%s%0.2f' % (currency, self.nominal_price)
+        return price_str(self.nominal_price)
         
     class Meta:
         verbose_name_plural = 'Order Groups'
@@ -32,7 +31,7 @@ class CostLevel(models.Model):
     price = models.DecimalField('Price per unit', max_digits=6, decimal_places=2)
     
     def str_price(self):
-        return '%s%0.2f' % (currency, self.price)
+        return price_str(self.price)
     
     def save(self, *args, **kwargs):
         super(CostLevel, self).save(*args, **kwargs)
@@ -44,8 +43,17 @@ class CostLevel(models.Model):
         self.order_group.save()
     
     def __unicode__(self):
-        return '%s cost: %0.2f @ %d units' % (self.order_group.name, self.price, self.order_quantity)
-        
+        return '%s cost: %s @ %d units' % (self.order_group.name, price_str(self.price), self.order_quantity)
+
+def price_str(value):
+    if value is None:
+        return '--'
+    currency = u'\u00A3'
+    if value >= 0.5:
+        return '%s%0.2f' % (currency, value)
+    else:
+        return '%s%0.3f' % (currency, value)
+
 class Component(BasicModel):
     order_group = models.ForeignKey(OrderGroup, related_name='components')
     
@@ -57,7 +65,6 @@ class Component(BasicModel):
         verbose_name = 'Component'
     
 class Assembly(BasicModel):
-    name = models.CharField(max_length=200)
     size = models.CharField(max_length=200, null=True, blank=True)
     components = models.ManyToManyField(Component, related_name='assemblies')
     
@@ -66,10 +73,14 @@ class Assembly(BasicModel):
         return self.components.count()
     
     def nominal_raw_cost(self):
-        return float(self.components.aggregate(models.Sum('nominal_price'))['nominal_price__sum'])
+        raw_cost = self.components.aggregate(models.Sum('order_group__nominal_price'))['order_group__nominal_price__sum']
+        if raw_cost:
+            return float(raw_cost)
+        else:
+            return None
     
     def str_nominal_raw_cost(self):
-        return '%s%0.2f' % (currency, self.nominal_raw_cost())
+        return price_str(self.nominal_raw_cost())
     
     def __unicode__(self):
         return self.name
@@ -80,16 +91,24 @@ class Assembly(BasicModel):
 
 class SKU(BasicModel):
     assemblies = models.ManyToManyField(Assembly, related_name='skus')
-    dft_price = models.DecimalField('Default Sales Price', max_digits=6, decimal_places=2)
+    dft_price = models.DecimalField('Default Sales Price', max_digits=6, decimal_places=2, null = True)
     
     def assembly_count(self):
         return self.assemblies.count()
     
     def nominal_raw_cost(self):
+        if self.assemblies.count() == 0:
+            return '--'
         cost = 0
         for assy in self.assemblies.all():
             cost += assy.nominal_raw_cost()
         return cost
+    
+    def str_nominal_raw_cost(self):
+        return price_str(self.nominal_raw_cost())
+    
+    def str_dft_price(self):
+        return price_str(self.dft_price)
         
     class Meta:
         verbose_name_plural = 'SKUs'
@@ -100,17 +119,25 @@ class Customer(BasicModel):
     
     def sku_count(self):
         return self.skus.count()
+        
+    class Meta:
+        verbose_name_plural = 'Customers'
+        verbose_name = 'Customer'
 
 class CustomerSKU(models.Model):
     sku = models.ForeignKey(SKU, related_name='c_skus')
     customer = models.ForeignKey(Customer, related_name='c_skus')
     price = models.DecimalField('Sales Price', max_digits=6, decimal_places=2)
+    xl_id = models.IntegerField('Excel ID', default=-1)
     
     def sku_name(self):
         return self.sku.name
     
+    def customer_name(self):
+        return self.customer.name
+    
     def str_price(self):
-        return '%s%0.2f' % (currency, self.price)
+        return price_str(self.price)
         
     def __unicode__(self):
         return '%s for %s' % (self.sku.name, self.customer.name)
@@ -163,7 +190,7 @@ class SKUSales(models.Model):
     
     def __unicode__(self):
         return '%s sells %d at %s starting %s' % (self.sku_name(), self.sales, self.period.customer.name,  
-                                            self.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT))
+                                            self.period.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT))
     
     class Meta:
         verbose_name_plural = 'SKU Sales'

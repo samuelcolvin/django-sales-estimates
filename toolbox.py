@@ -1,6 +1,6 @@
 import os, sys
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
-import SalesEstimates.worker
+import SalesEstimates.worker as worker
 import SalesEstimates.models as m
 
 class WorkerFuncs(object):
@@ -13,17 +13,28 @@ class WorkerFuncs(object):
                 print 'exiting'
                 return
         print ''
-        SalesEstimates.worker.generate_sales_periods(WorkerFuncs._print)
+        worker.generate_sales_periods(WorkerFuncs._print)
         
     @staticmethod
     def populate_sales_periods(interactive):
-        SalesEstimates.worker.populate_sales_periods(WorkerFuncs._print)
+        worker.populate_sales_periods(WorkerFuncs._print)
+        
+    @staticmethod
+    def import_from_xl(interactive):
+        response = 'y'
+        if interactive:
+            response = raw_input('Clear database before importing from excel? [y/n] ')
+        if response.lower() == 'y' or not interactive:
+                worker.clear_se(WorkerFuncs._print)
+        fname = 'CF sales estimates formatted.xlsx' # raw_input('Enter file name: ')
+        worker.ReadXl(fname, WorkerFuncs._print)
+        worker.generate_sales_periods(WorkerFuncs._print)
+        worker.populate_sales_periods(WorkerFuncs._print)
         
     @staticmethod
     def _print(line):
         print line
     
-
     @staticmethod
     def x_exit_without_doing_anything(interactive):
         if interactive:

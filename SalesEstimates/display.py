@@ -1,7 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import A
 #from django_tables2_simplefilter import F
-import json, base64
 import SkeletalDisplay
 import SalesEstimates.models as m
 
@@ -16,7 +15,7 @@ class OrderGroup(SkeletalDisplay.ModelDisplay):
 		str_nominal_price = tables.Column(verbose_name='Nominal Price')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			model = m.OrderGroup
-			exclude = ('id', 'description', 'nominal_price')
+			exclude = ('id', 'description', 'xl_id', 'nominal_price')
 
 class CostLevel(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[]
@@ -38,7 +37,7 @@ class Component(SkeletalDisplay.ModelDisplay):
 		str_nominal_price = tables.Column(verbose_name='Nominal Price')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			model = m.Component
-			exclude = ('id', 'description', 'nominal_price')
+			exclude = ('id', 'description', 'xl_id', 'nominal_price', 'xl_id')
 
 class Assembly(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[('Nominal Raw Cost','str_nominal_raw_cost'), ('Components', 'component_count')]
@@ -51,7 +50,7 @@ class Assembly(SkeletalDisplay.ModelDisplay):
 		str_nominal_raw_cost = tables.Column(verbose_name='Nominal Cost')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			model = m.Assembly
-			exclude = ('id', 'description')
+			exclude = ('id', 'description', 'xl_id')
 
 class SKU(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[('Assemblies', 'assembly_count')]
@@ -60,15 +59,16 @@ class SKU(SkeletalDisplay.ModelDisplay):
 	
 	class Table(tables.Table):
 		name = tables.LinkColumn('display_item', args=['SalesEstimates', 'SKU', A('pk')])
-		component_count = tables.Column(verbose_name='Components')
-		str_nominal_raw_cost = tables.Column(verbose_name='Nominal Cost')
+		assembly_count = tables.Column(verbose_name='Assemblies')
+		str_dft_price = tables.Column(verbose_name='Default Price')
+		str_nominal_raw_cost = tables.Column(verbose_name='Nominal Raw Cost')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			model = m.SKU
-			exclude = ('id', 'description')
+			exclude = ('id', 'description', 'xl_id', 'dft_price')
 
 class Customer(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[('SKUs', 'sku_count')]
-	attached_tables = [{'name':'CustomerSKU', 'populate':'c_skus', 'title':'SKUs Sold'},
+	attached_tables = [{'name':'CustomerSKU', 'table': 'Table2', 'populate':'c_skus', 'title':'SKUs Sold'},
 					{'name':'CustomerSalesPeriod', 'populate':'c_sales_periods', 'title':'Sales Periods'}]
 	index = 4
 	
@@ -82,7 +82,7 @@ class Customer(SkeletalDisplay.ModelDisplay):
 class SalesPeriod(SkeletalDisplay.ModelDisplay):
 	extra_funcs=[]
 	attached_tables = [{'name':'CustomerSalesPeriod', 'table': 'Table2', 'populate':'c_sales_periods', 'title':'Customers'}]
-	index = 5
+	index = 6
 	
 	class Table(tables.Table):
 		str_start = tables.LinkColumn('display_item', args=['SalesEstimates', 'SalesPeriod', A('pk')],
@@ -93,10 +93,17 @@ class SalesPeriod(SkeletalDisplay.ModelDisplay):
 			pass
 
 class CustomerSKU(SkeletalDisplay.ModelDisplay):
-	display = False
+	index = 5
 	
 	class Table(tables.Table):
-		sku_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'SKU', A('sku.pk')])
+		customer_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'CustomerSKU', A('pk')], verbose_name='Customer')
+		sku_name = tables.Column(verbose_name='SKU')
+		str_price = tables.Column(verbose_name='Price')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+	
+	class Table2(tables.Table):
+		sku_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'SKU', A('sku.pk')], verbose_name='SKU')
 		str_price = tables.Column(verbose_name='Price')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
@@ -123,7 +130,7 @@ class SKUSales(SkeletalDisplay.ModelDisplay):
 	display = False
 	
 	class Table(tables.Table):
-		sku_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'CustomerSKU', A('sku.pk')])
-		slaes = tables.Column(verbose_name='Number of Sales')
+		sku_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'CustomerSKU', A('csku.pk')])
+		sales = tables.Column(verbose_name='Number of Sales')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
