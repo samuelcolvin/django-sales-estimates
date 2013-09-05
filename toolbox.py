@@ -21,15 +21,21 @@ class WorkerFuncs(object):
         
     @staticmethod
     def import_from_xl(interactive):
+        fname = 'CF sales estimates generated.xlsx'
+#         fname =  raw_input('Enter file name (note: databaes will be cleared to accept new data): ')
         response = 'y'
         if interactive:
             response = raw_input('Clear database before importing from excel? [y/n] ')
         if response.lower() == 'y' or not interactive:
-                worker.clear_se(WorkerFuncs._print)
-        fname = 'CF sales estimates formatted.xlsx' # raw_input('Enter file name: ')
+                worker.clear_se(WorkerFuncs._print) 
         worker.ReadXl(fname, WorkerFuncs._print)
         worker.generate_sales_periods(WorkerFuncs._print)
         worker.populate_sales_periods(WorkerFuncs._print)
+        
+    @staticmethod
+    def export_to_xl(interactive):
+        fname = 'CF sales estimates generated.xlsx' # raw_input('Enter file name: ')
+        worker.WriteXl(fname, WorkerFuncs._print)
         
     @staticmethod
     def _print(line):

@@ -1,9 +1,11 @@
 *DONE add customer sales periods to skeletal cms
 *DONE add option for multiple tables to model display
-* add import form excel, frontend???
+*DONE add import form excel, frontend???
 *DONE add backend script for house keeping - eg. creating periods and populating them
+* add excel output
 * exlcude some fields from display
 * fix breadcrumbs
+* add front end import
 * add front page showing summary of all tables
 * calculate sales estimates
 * try using djangobone to create clientside tables
