@@ -8,6 +8,9 @@
 * fix breadcrumbs
 * add front page showing summary of all tables
 *DONE calculate sales estimates
+* think about how sales periods are generated with import
+* get heavy lifting done separately
+* set secure passwords
 * try using djangobone to create clientside tables
 * improve appearance of grid
 * create/find favicon

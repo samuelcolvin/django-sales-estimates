@@ -9,11 +9,14 @@ import SalesEstimates.worker
 from django.core.files import File
 import UploadedFiles.models as upload_m
 from datetime import datetime as dtdt
-import settings
+import settings, os
 
 def perform_export():
     logger = Logger()
-    tmp_fname = 'tmp.xlsx'
+    if settings.ON_SERVER:
+        tmp_fname = os.path.join(settings.SITE_ROOT,  '/home/scolvin/cf/tmp.xlsx')
+    else:
+        tmp_fname = 'tmp.xlsx'
     WriteXl(tmp_fname, logger.addline)
     f_tmp = open(tmp_fname, 'r')
     fname = 'Childs Farm Sales Estimates_%s.xlsx' % dtdt.now().strftime(settings.CUSTOM_SHORT_DT_FORMAT)

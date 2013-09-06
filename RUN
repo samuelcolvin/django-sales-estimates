@@ -1,0 +1,1 @@
+PYTHONPATH=/home/scolvin/django-cf:/home/scolvin/cf:/home/scolvin/cf/cf:. python manage.py runserver 127.0.0.1:62272
