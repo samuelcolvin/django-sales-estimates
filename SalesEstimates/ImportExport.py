@@ -6,6 +6,40 @@ import inspect, traceback
 from django.core.exceptions import ObjectDoesNotExist
 import operator
 import SalesEstimates.worker
+from django.core.files import File
+import UploadedFiles.models as upload_m
+from datetime import datetime as dtdt
+import settings
+
+def perform_export():
+    logger = Logger()
+    tmp_fname = 'tmp.xlsx'
+    WriteXl(tmp_fname, logger.addline)
+    f_tmp = open(tmp_fname, 'r')
+    fname = 'Childs Farm Sales Estimates_%s.xlsx' % dtdt.now().strftime(settings.CUSTOM_SHORT_DT_FORMAT)
+    file_mdl = upload_m.ExcelFiles()
+    file_mdl.xlfile.save(fname, File(f_tmp))
+    file_mdl.save()
+    return (file_mdl.xlfile.url, logger.get_log())
+
+def perform_import(fname, delete_first):
+    logger = Logger()
+    if delete_first:
+        SalesEstimates.worker.clear_se(logger.addline) 
+        SalesEstimates.worker.generate_sales_periods(logger.addline)
+    ReadXl(fname, logger.addline)
+    SalesEstimates.worker.generate_auto_sales_figures(logger.addline)
+    return logger.get_log()
+
+class Logger:
+    def __init__(self):
+        self._log = ''
+        
+    def addline(self, line):
+        self._log +='<p>%s</p>\n' % line
+        
+    def get_log(self):
+        return self._log
 
 class _ImportExport:
     def get_models(self):
@@ -171,7 +205,7 @@ class WriteXl(_ImportExport):
         export_models = self.get_models()
         try:
             for export_model in export_models:
-                print 'Exporting data to %s' % export_model.__name__
+                self._log('Exporting data to %s' % export_model.__name__)
                 self._write_model(export_model)
             self._write_model(m.SalesPeriod, 'Sales Figures', self.OutputSheet, [])
         except Exception:

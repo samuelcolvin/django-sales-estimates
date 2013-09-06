@@ -17,6 +17,10 @@ import user_settings
 
 import SkeletalDisplay
 
+import UploadedFiles.forms as upload_forms
+
+import SalesEstimates.ImportExport as imex
+
 def index(request):
 	page_gen = PageGenerator(request)
 	return page_gen.index()
@@ -28,6 +32,18 @@ def display_model(request, app_name, model_name):
 def display_item(request, app_name, model_name, item_id):
 	page_gen = PageGenerator(request)
 	return page_gen.display_item(app_name, model_name, item_id)
+
+def upload(request):
+	apps = SkeletalDisplay.get_display_apps()
+	(upload_form, log) = upload_forms.display(request)
+	content = {'upload_form': upload_form, 'log': log}
+	return base(request, 'Import Files', content, 'upload.html', apps)
+
+def download(request):
+	apps = SkeletalDisplay.get_display_apps()
+	(url, log) = imex.perform_export()
+	content = {'download_url': url, 'log': log}
+	return base(request, 'Import Files', content, 'download.html', apps)
 
 class PageGenerator(object):
 	def __init__(self, request):
@@ -43,7 +59,7 @@ class PageGenerator(object):
 		self._single_t = self._disp_model.model._meta.verbose_name.title()
 		
 	def index(self):
-		content = {'display_apps': SkeletalDisplay.json_apps(self._apps), 'page_menu': ()}
+		content = {'page_menu': ()}
 		return base(self._request, 'Market Trace', content, 'index.html', self._apps)
 	
 	def display_model(self, app_name, model_name):
@@ -170,7 +186,9 @@ class PageGenerator(object):
 			return '%d' % value
 	
 def base(request, title, content, template, apps=None, disp_model=None):
-	top_menu = [{'url': reverse('admin:index'), 'name': 'Admin'}]
+	top_menu = [{'url': reverse('upload'), 'name': 'Import'},
+			{'url': reverse('download'), 'name': 'Export'},
+			{'url': reverse('admin:index'), 'name': 'Admin'}]
 			
 			# [{'url': reverse('test_url'), 'name': 'Test URL'},
 			#{'url': reverse('add_trace'), 'name': 'Add Trace'},

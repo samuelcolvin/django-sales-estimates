@@ -382,3 +382,8 @@ a:link, a:visited, a:hover, a:focus {
 	border: 1px solid black;
 	max-width: none;
 }
+
+.help-text {
+	font-size: 90%;
+	color: #888;
+}
