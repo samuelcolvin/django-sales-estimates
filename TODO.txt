@@ -3,16 +3,19 @@
 *DONE add import form excel, frontend???
 *DONE add backend script for house keeping - eg. creating periods and populating them
 *DONE add excel output
-* add front end import
+*DONE add front end import
+* fix problem with import not generating sales periods
 * exlcude some fields from display
 * fix breadcrumbs
+* correct index title from markets trace
+* rename whole thing to ignore child's farm and become brand less (extra file of customer settings?)
 * add front page showing summary of all tables
 *DONE calculate sales estimates
 * think about how sales periods are generated with import
 * get heavy lifting done separately
 * set secure passwords
-* try using djangobone to create clientside tables
+* try using djangobone to create clientside tables or django jqgrid
 * improve appearance of grid
 * create/find favicon
-* setup authentication (wait to see which server)
-* move to server (which one?)
+* setup django authentication
+* setup script to move to server, straight from github
