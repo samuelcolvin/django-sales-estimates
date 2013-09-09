@@ -1,6 +1,8 @@
 import ExcelImportExport
 import models as m
 import openpyxl
+from django.db import models as db_models
+import SalesEstimates.worker
 
 class OrderGroup(ExcelImportExport.ImExBase):
     imex_fields = ExcelImportExport.default_imex_fields + ['minimum_order', 'lead_time']
@@ -15,7 +17,7 @@ class OrderGroup(ExcelImportExport.ImExBase):
                 self._CL_heads[cl_head] = int(cl_head.replace('costlevels', ''))
             ExcelImportExport.ImportExtra.__init__(self, ws, headings)
         
-        def __call__(self, order_group, row):
+        def get_row(self, order_group, row):
             for cl_head in self._CL_heads:
                 value = self._ws.cell(row=row, column=self._headings[cl_head]).value
                 if value is not None:
@@ -24,7 +26,7 @@ class OrderGroup(ExcelImportExport.ImExBase):
                                                price=value)
     
     class ExportExtra:
-        def __init__(self, ws, firstcol, row):
+        def __init__(self, ws, firstcol):
             self._order_quants = self._get_order_quantities()
             self._ws = ws
             self._firstcol = firstcol
@@ -32,6 +34,7 @@ class OrderGroup(ExcelImportExport.ImExBase):
             for (index, quant) in enumerate(self._order_quants):
                 self._columns[quant] = index + firstcol
 
+        def add_headings(self, row):
             heads = ['costlevels %d' % order_quant for order_quant in self._order_quants]
             for (index, head) in enumerate(heads):
                 col = index + self._firstcol
@@ -39,7 +42,7 @@ class OrderGroup(ExcelImportExport.ImExBase):
                 c.value = head
                 c.style.font.bold = True
         
-        def __call__(self, ordergroup, row):
+        def add_row(self, ordergroup, row):
             for cost_level in ordergroup.costlevels.all():
                 c = self._ws.cell(row = row, column=self._columns[cost_level.order_quantity])
                 c.value = cost_level.price
@@ -114,7 +117,7 @@ class CustomerSKU(ExcelImportExport.ImExBase):
             ExcelImportExport.RedExtra.__init__(self, *args, **kwargs)
     
 class SalesPeriod(ExcelImportExport.ImExBase):
-    imex_fields = []
+    imex_fields = ['xl_id']
     imex_order = 6
     imex_top_offset = 1
     import_edit_only = True
@@ -129,7 +132,7 @@ class SalesPeriod(ExcelImportExport.ImExBase):
                     self._col_customers[col_number] = int(val)
             ExcelImportExport.ImportExtra.__init__(self, ws, headings)
         
-        def __call__(self, sales_period, row):
+        def get_row(self, sales_period, row):
             for col in self._col_customers:
                 customer = m.Customer.objects.get(xl_id = self._col_customers[col])
                 value = self._ws.cell(row = row, column = col).value
@@ -142,11 +145,12 @@ class SalesPeriod(ExcelImportExport.ImExBase):
                 csp.save()
             
     class ExportExtra(ExcelImportExport.RedExtra):
-        def __init__(self, ws, firstcol, row):
+        def __init__(self, ws, firstcol):
             self._lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
             #{'heading': 'End', 'func': 'str_finish'}, {'heading': 'Start', 'func': 'str_start'}
-            ExcelImportExport.RedExtra.__init__(self, ws, firstcol, 1)
+            ExcelImportExport.RedExtra.__init__(self, ws, firstcol)
 
+        def add_headings(self, row):
             customers = m.Customer.objects.all().values_list('xl_id', flat=True)
             self._columns = [(i + self._firstcol + len(self._lookups), c) for (i, c) in enumerate(customers)]
             for (col, customer) in self._columns:
@@ -162,11 +166,76 @@ class SalesPeriod(ExcelImportExport.ImExBase):
             c.value = 'Store Count'
             c.style.font.size = 14
             c.style.font.bold = True
+            ExcelImportExport.RedExtra.add_headings(self, 1)
             self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 20
 
-        def __call__(self, sales_period, row):
+        def add_row(self, sales_period, row):
             for csp in m.CustomerSalesPeriod.objects.filter(period = sales_period):
                 col = self._columns_dict[csp.customer.xl_id]
                 c = self._ws.cell(row = row, column=col)
                 c.value = csp.store_count
-            ExcelImportExport.RedExtra.__call__(self, sales_period, row)
+            ExcelImportExport.RedExtra.add_row(self, sales_period, row)
+            
+            
+    
+class OutputSheet(ExcelImportExport.ImExBase):
+    imex_fields = ['xl_id']
+    imex_order = 7
+    model = m.SalesPeriod
+    import_sheet = False
+    imex_top_offset = 1
+    
+    class ExportExtra(ExcelImportExport.RedExtra):
+        def __init__(self, *args, **kwargs):
+            self._lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
+            ExcelImportExport.RedExtra.__init__(self, *args, **kwargs)
+                 
+        def add_headings(self, row):
+            customers = m.Customer.objects.all().values_list('name', flat=True)
+            self._columns = [(i*4 + self._firstcol + len(self._lookups), c) for (i, c) in enumerate(customers)]
+            for (col, customer) in self._columns:
+                self._set_left_border(self._add_bold(0, col, customer))
+                self._ws.merge_cells(start_row=0, start_column=col, end_row=0, end_column=col+3)
+                self._set_bottom_border(self._set_left_border(self._add_bold(1, col, 'Stores')))
+                self._set_bottom_border(self._add_bold(1, col + 1, 'SKUs Sold'))
+                self._set_bottom_border(self._add_bold(1, col + 2, 'Cost'))
+                self._set_bottom_border(self._add_bold(1, col + 3, 'Income'))
+            self._columns_dict = {}
+            for (col, customer) in self._columns:
+                self._columns_dict[customer]= col
+            self._add_bold(0, 0, 'Sales Estimates').style.font.size = 14
+            ExcelImportExport.RedExtra.add_headings(self, 1)
+            self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
+            self._set_bottom_border(self._ws.cell(row = 1, column = 0))
+         
+        def add_row(self, sales_period, row):
+            for csp in m.CustomerSalesPeriod.objects.filter(period = sales_period):
+                col = self._columns_dict[csp.customer.name]
+                c = self._ws.cell(row = row, column=col)
+                c.value = csp.store_count
+                self._set_left_border(c)
+                sku_sales = m.SKUSales.objects.filter(period = csp, csku__customer=csp.customer)
+                if sku_sales.count() == 0:
+                    continue
+                self._ws.cell(row = row, column=col + 1).value = SalesEstimates.worker.calc_totle_sales(sku_sales)
+                self._ws.cell(row = row, column=col + 2).value = SalesEstimates.worker.calc_sku_sale_group_cost(sku_sales)
+                self._ws.cell(row = row, column=col + 3).value = SalesEstimates.worker.calc_sku_sale_income(sku_sales)
+            ExcelImportExport.RedExtra.add_row(self, sales_period, row)
+         
+        def _add_bold(self, row, col, value):
+            c = self._ws.cell(row = row, column=col)
+            c.value = value
+            c.style.font.bold = True
+            return c
+     
+        def _set_left_border(self, cell):
+            cell.style.borders.left.border_style = openpyxl.style.Border.BORDER_THIN
+            return cell
+         
+        def _set_bottom_border(self, cell):
+            cell.style.borders.bottom.border_style = openpyxl.style.Border.BORDER_THIN
+            return cell
+             
+        def _set_red(self, cell):
+            pass
+                    
