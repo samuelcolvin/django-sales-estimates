@@ -1,8 +1,6 @@
 from django.db import models
 import settings
-from django.core.exceptions import ObjectDoesNotExist
-
-_default_imex_fields = ['xl_id', 'name', 'description', 'comment']
+from django.contrib.auth.models import User
 
 class BasicModel(models.Model):
     name = models.CharField(max_length=200)
@@ -20,11 +18,6 @@ class OrderGroup(BasicModel):
     nominal_price = models.DecimalField('Nominal price per unit', max_digits=6, decimal_places=4, null=True)
     minimum_order = models.IntegerField(default=0)
     lead_time = models.IntegerField('Lead Time (days)', default=0)
-    
-    imex_fields = _default_imex_fields + ['minimum_order', 'lead_time']
-    imex_order = 0
-    import_extra_func = 'import_costlevels'
-    export_cls = 'OrderGroupExtra'
     
     def cost(self, orders):
         lowest_qp=0
@@ -73,10 +66,6 @@ def price_str(value):
 class Component(BasicModel):
     order_group = models.ForeignKey(OrderGroup, related_name='components')
     
-    imex_fields = _default_imex_fields + ['order_group']
-    imex_order = 1
-    export_cls = 'ComponentExtra'
-    
     def str_nominal_price(self):
         return self.order_group.str_nominal_price()
         
@@ -87,11 +76,6 @@ class Component(BasicModel):
 class Assembly(BasicModel):
     size = models.CharField(max_length=200, null=True, blank=True)
     components = models.ManyToManyField(Component, related_name='assemblies')
-    
-    imex_fields = _default_imex_fields + ['size']
-    imex_order = 2
-    import_extra_func = 'import_Assembly_extra'
-    export_cls = 'AssemblyExtra'
     
     def component_count(self):
         return self.components.count()
@@ -118,11 +102,6 @@ class SKU(BasicModel):
     dft_price = models.DecimalField('Default Sales Price', max_digits=6, decimal_places=2, null = True)
     dft_sale_rate = models.FloatField('Default Sale Rate', null = True)
     
-    imex_fields = _default_imex_fields + ['dft_price', 'dft_sale_rate']
-    imex_order = 3
-    import_extra_func = 'import_SKU_extra'
-    export_cls = 'SKUExtra'
-    
     def assembly_count(self):
         return self.assemblies.count()
     
@@ -147,9 +126,6 @@ class SKU(BasicModel):
 class Customer(BasicModel):
     skus = models.ManyToManyField(SKU, related_name='customers', through='CustomerSKU')
     
-    imex_fields = _default_imex_fields
-    imex_order = 4
-    
     def sku_count(self):
         return self.skus.count()
         
@@ -163,10 +139,6 @@ class CustomerSKU(models.Model):
     price = models.DecimalField('Sales Price', max_digits=6, decimal_places=2, null=True)
     sale_rate = models.FloatField('Sale Rate', null = True)
     xl_id = models.IntegerField('Excel ID', default=-1)
-    
-    imex_fields = ['xl_id', 'sku', 'customer', 'price', 'sale_rate']
-    imex_order = 5
-    export_cls = 'CustomerSKUExtra'
     
     def sku_name(self):
         return self.sku.name
@@ -205,13 +177,6 @@ class SalesPeriod(models.Model):
     finish_date = models.DateField()
     customers = models.ManyToManyField(Customer, related_name='sales_periods', through='CustomerSalesPeriod')
     xl_id = models.IntegerField('Excel ID', default=-1)
-    
-    imex_fields = ['xl_id']
-    imex_order = 6
-    imex_top_offset = 1
-    import_extra_func = 'import_SalesPeriod'
-    import_edit_only = True
-    export_cls = 'SalesPeriodExtra'
     
     def str_simple_date(self):
         form = '%b-%y'
