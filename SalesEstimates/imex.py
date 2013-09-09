@@ -207,6 +207,7 @@ class OutputSheet(ExcelImportExport.ImExBase):
             ExcelImportExport.RedExtra.add_headings(self, 1)
             self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
             self._set_bottom_border(self._ws.cell(row = 1, column = 0))
+            self._set_bottom_border(self._ws.cell(row = 1, column = 1))
          
         def add_row(self, sales_period, row):
             for csp in m.CustomerSalesPeriod.objects.filter(period = sales_period):
@@ -217,9 +218,10 @@ class OutputSheet(ExcelImportExport.ImExBase):
                 sku_sales = m.SKUSales.objects.filter(period = csp, csku__customer=csp.customer)
                 if sku_sales.count() == 0:
                     continue
-                self._ws.cell(row = row, column=col + 1).value = SalesEstimates.worker.calc_totle_sales(sku_sales)
-                self._ws.cell(row = row, column=col + 2).value = SalesEstimates.worker.calc_sku_sale_group_cost(sku_sales)
-                self._ws.cell(row = row, column=col + 3).value = SalesEstimates.worker.calc_sku_sale_income(sku_sales)
+                info = sku_sales.aggregate(sales = db_models.Sum('sales'), income = db_models.Sum('cost'), cost = db_models.Sum('income'))
+                self._ws.cell(row = row, column=col + 1).value = info['sales']
+                self._ws.cell(row = row, column=col + 2).value = info['cost']
+                self._ws.cell(row = row, column=col + 3).value = info['income']
             ExcelImportExport.RedExtra.add_row(self, sales_period, row)
          
         def _add_bold(self, row, col, value):

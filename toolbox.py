@@ -3,6 +3,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 import SalesEstimates.worker as worker
 import ExcelImportExport.ImportExport as ImportExport
 import SalesEstimates.models as m
+import time
 
 class WorkerFuncs(object):
     @staticmethod
@@ -38,6 +39,13 @@ class WorkerFuncs(object):
     def export_to_xl(interactive):
         fname = 'CF sales estimates generated.xlsx' # raw_input('Enter file name: ')
         ImportExport.WriteXl(fname, WorkerFuncs._print)
+        
+    @staticmethod
+    def generate_sales_estimates(interactive):
+        t = time.time()
+        worker.generate_auto_sales_figures(WorkerFuncs._print)
+        diff = time.time() - t
+        print 'time taken: %0.3f' % diff
         
     @staticmethod
     def _print(line):

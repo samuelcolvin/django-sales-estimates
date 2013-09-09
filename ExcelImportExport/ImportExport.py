@@ -1,48 +1,35 @@
-import SalesEstimates.models as m
 from django.utils.encoding import smart_text
 import openpyxl, re
 from django.db import models
 import inspect, traceback
 from django.core.exceptions import ObjectDoesNotExist
-import operator
 import SalesEstimates.worker
 from django.core.files import File
-import ExcelImportExport.models as upload_m
-from datetime import datetime as dtdt
+import ExcelImportExport.models
 import settings, os
+import SkeletalDisplay
 
 def perform_export():
-    logger = Logger()
+    logger = SkeletalDisplay.Logger()
+    tmp_fname = 'tmp.xlsx'
     if settings.ON_SERVER:
-        tmp_fname = os.path.join(settings.SITE_ROOT,  'tmp.xlsx')
-    else:
-        tmp_fname = 'tmp.xlsx'
+        tmp_fname = os.path.join(settings.SITE_ROOT,  tmp_fname)
     WriteXl(tmp_fname, logger.addline)
     f_tmp = open(tmp_fname, 'r')
-    fname = 'excel_dump_%s.xlsx' % dtdt.now().strftime(settings.CUSTOM_SHORT_DT_FORMAT)
-    file_mdl = upload_m.ExcelFiles()
-    file_mdl.xlfile.save(fname, File(f_tmp))
+    file_mdl = ExcelImportExport.models.ExcelFiles()
+    file_mdl.xlfile.save(tmp_fname, File(f_tmp))
+    file_mdl.source = 'DL'
     file_mdl.save()
     return (file_mdl.xlfile.url, logger.get_log())
 
 def perform_import(fname, delete_first):
-    logger = Logger()
+    if not fname.endswith('.xlsx'):
+        raise Exception('File must be xlsx, not xls or any other format.')
+    logger = SkeletalDisplay.Logger()
     if delete_first:
-        SalesEstimates.worker.clear_se(logger.addline) 
-        SalesEstimates.worker.generate_sales_periods(logger.addline)
+        SalesEstimates.worker.delete_before_upload(logger.addline)
     ReadXl(fname, logger.addline)
-    SalesEstimates.worker.generate_auto_sales_figures(logger.addline)
     return logger.get_log()
-
-class Logger:
-    def __init__(self):
-        self._log = ''
-        
-    def addline(self, line):
-        self._log +='<p>%s</p>\n' % line
-        
-    def get_log(self):
-        return self._log
 
 class _ImportExport:
     def get_models(self):
@@ -88,8 +75,7 @@ class ReadXl(_ImportExport):
         import_count = 0
         for self._row in range(self._row, ws.get_highest_row()):
             xl_id = ws.cell(row=self._row, column=headings['xl_id']).value
-            if xl_id == '':
-                self._log('xl_id is blank on row %d on %s, skipping row' % (self._row, self._sheet_name))
+            if not isinstance(xl_id, int):
                 continue
             finds = sheet_model.model.objects.filter(xl_id = xl_id)
             if finds.count() == 1:
@@ -157,6 +143,7 @@ class WriteXl(_ImportExport):
         self._row = 0
         self._delete_excess_sheets()
         export_models = self.get_models()
+        self.success = False
         try:
             for export_model in export_models:
                 self._log('Exporting data to %s' % export_model.__name__)
@@ -172,7 +159,8 @@ class WriteXl(_ImportExport):
             except IOError:
                 log('ERROR: writing to "%s" failed, file may be open' % fname)
             else:
-                self._log('writing "%s"' % fname)
+                self._log('writing output file')
+                self.success = False
         
     def _write_model(self, sheet_model):
         ws = self._wb.create_sheet()
