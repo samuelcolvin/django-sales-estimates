@@ -5,9 +5,10 @@ import SkeletalDisplay
 import SalesEstimates.models as m
 
 class OrderGroup(SkeletalDisplay.ModelDisplay):
-	extra_funcs=[('Nominal Price','str_nominal_price')]
+	extra_funcs={'Nominal Price': 'str_nominal_price'}
 	attached_tables = [{'name':'CostLevel', 'populate':'costlevels', 'title':'Cost Levels'},
 					{'name':'Component', 'populate':'components', 'title':'Components with this Order Group'}]
+	
 	index = 0
 	
 	class Table(tables.Table):
@@ -18,7 +19,6 @@ class OrderGroup(SkeletalDisplay.ModelDisplay):
 			exclude = ('id', 'description', 'nominal_price')
 
 class CostLevel(SkeletalDisplay.ModelDisplay):
-	extra_funcs=[]
 	display = False
 	
 	class Table(tables.Table):
@@ -28,7 +28,7 @@ class CostLevel(SkeletalDisplay.ModelDisplay):
 			exclude = ('id', 'component', 'price')
 
 class Component(SkeletalDisplay.ModelDisplay):
-	extra_funcs=[('Nominal Price','str_nominal_price')]
+	extra_funcs={'Nominal Price': 'str_nominal_price'}
 	attached_tables = [{'name':'Assembly', 'populate':'assemblies', 'title':'Assemblies Using this Component'}]
 	index = 1
 	
@@ -40,7 +40,7 @@ class Component(SkeletalDisplay.ModelDisplay):
 			exclude = ('id', 'description', 'nominal_price', 'xl_id')
 
 class Assembly(SkeletalDisplay.ModelDisplay):
-	extra_funcs=[('Nominal Raw Cost','str_nominal_raw_cost'), ('Components', 'component_count')]
+	extra_funcs={'Nominal Raw Cost':'str_nominal_raw_cost', 'Components': 'component_count'}
 	attached_tables = [{'name':'Component', 'populate':'components', 'title':'Components'}]
 	index = 2
 	
@@ -53,7 +53,7 @@ class Assembly(SkeletalDisplay.ModelDisplay):
 			exclude = ('id', 'description')
 
 class SKU(SkeletalDisplay.ModelDisplay):
-	extra_funcs=[('Assemblies', 'assembly_count')]
+	extra_funcs={'Assemblies': 'assembly_count'}
 	attached_tables = [{'name':'Assembly', 'populate':'assemblies', 'title':'Included Assemblies'}]
 	index = 3
 	
@@ -67,7 +67,7 @@ class SKU(SkeletalDisplay.ModelDisplay):
 			exclude = ('id', 'description', 'dft_price')
 
 class Customer(SkeletalDisplay.ModelDisplay):
-	extra_funcs=[('SKUs', 'sku_count')]
+	extra_funcs= {'SKUs': 'sku_count'}
 	attached_tables = [{'name':'CustomerSKU', 'table': 'Table2', 'populate':'c_skus', 'title':'SKUs Sold'},
 					{'name':'CustomerSalesPeriod', 'populate':'c_sales_periods', 'title':'Sales Periods'}]
 	index = 4
@@ -80,7 +80,7 @@ class Customer(SkeletalDisplay.ModelDisplay):
 			exclude = ('id', 'description')
 
 class SalesPeriod(SkeletalDisplay.ModelDisplay):
-	extra_funcs=[('Period', 'str_simple_date')]
+	extra_funcs= {'Period': 'str_simple_date'}
 	attached_tables = [{'name':'CustomerSalesPeriod', 'table': 'Table2', 'populate':'c_sales_periods', 'title':'Customers'}]
 	index = 6
 	
