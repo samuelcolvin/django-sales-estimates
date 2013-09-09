@@ -62,6 +62,8 @@ def generate_auto_sales_figures(log):
 
 def clear_se(log):
     for mod_name in dir(m):
+        if mod_name == 'User':
+            continue
         mod = getattr(m, mod_name)
         if inspect.isclass(mod)  and issubclass(mod, models.Model) and not mod._meta.abstract:
             mod.objects.all().delete()

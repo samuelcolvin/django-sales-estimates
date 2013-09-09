@@ -119,9 +119,9 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    'se.SalesEstimates',
-    'se.SkeletalDisplay',
-    'se.UploadedFiles',
+    'SalesEstimates',
+    'SkeletalDisplay',
+    'ExcelImportExport',
 	'django_tables2',
 ]
 
@@ -168,6 +168,10 @@ SHORT_DATETIME_FORMAT = DATETIME_FORMAT
 
 #Skeletal Dispaly Settings
 DISPLAY_APPS = ['SalesEstimates']
+SITE_TITLE = 'TEST'
+
+#ExcelImportExport Settings
+IMEX_APP = 'SalesEstimates'
 
 #Sales Estimates
 
