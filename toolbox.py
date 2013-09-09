@@ -1,7 +1,7 @@
 import os, sys
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 import SalesEstimates.worker as worker
-import SalesEstimates.ImportExport as ImportExport
+import ExcelImportExport.ImportExport as ImportExport
 import SalesEstimates.models as m
 
 class WorkerFuncs(object):
@@ -30,8 +30,9 @@ class WorkerFuncs(object):
         if response.lower() == 'y':
                 worker.clear_se(WorkerFuncs._print) 
                 worker.generate_sales_periods(WorkerFuncs._print)
-        ImportExport.ReadXl(fname, WorkerFuncs._print)
-        worker.generate_auto_sales_figures(WorkerFuncs._print)
+        reader = ImportExport.ReadXl(fname, WorkerFuncs._print)
+        if reader.success:
+            worker.generate_auto_sales_figures(WorkerFuncs._print)
         
     @staticmethod
     def export_to_xl(interactive):
