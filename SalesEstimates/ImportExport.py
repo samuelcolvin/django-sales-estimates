@@ -14,12 +14,12 @@ import settings, os
 def perform_export():
     logger = Logger()
     if settings.ON_SERVER:
-        tmp_fname = os.path.join(settings.SITE_ROOT,  '/home/scolvin/cf/tmp.xlsx')
+        tmp_fname = os.path.join(settings.SITE_ROOT,  'tmp.xlsx')
     else:
         tmp_fname = 'tmp.xlsx'
     WriteXl(tmp_fname, logger.addline)
     f_tmp = open(tmp_fname, 'r')
-    fname = 'Childs Farm Sales Estimates_%s.xlsx' % dtdt.now().strftime(settings.CUSTOM_SHORT_DT_FORMAT)
+    fname = 'excel_dump_%s.xlsx' % dtdt.now().strftime(settings.CUSTOM_SHORT_DT_FORMAT)
     file_mdl = upload_m.ExcelFiles()
     file_mdl.xlfile.save(fname, File(f_tmp))
     file_mdl.save()
