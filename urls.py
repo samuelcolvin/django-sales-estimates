@@ -9,6 +9,15 @@ admin.autodiscover()
 
 urlpatterns = SkeletalDisplay.urls.urlpatterns
 
+urlpatterns += patterns('ExcelImportExport.forms',
+    url(r'^upload','upload', name='upload'),
+    url(r'^download','download', name='download')
+)
+
+urlpatterns += patterns('SalesEstimates.worker',
+    url(r'^generate', 'generate', name='generate')
+)
+
 urlpatterns += patterns('',
 	url(r'^admin/', include(admin.site.urls), name='admin'),)
 

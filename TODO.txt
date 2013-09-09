@@ -4,18 +4,30 @@
 *DONE add backend script for house keeping - eg. creating periods and populating them
 *DONE add excel output
 *DONE add front end import
-* fix problem with import not generating sales periods
+*DONE fix problem with import not generating sales periods
+* think about renaming SKUSales
+* make sure everyting is working and freeze at v0.1
 * exlcude some fields from display
 * fix breadcrumbs
-* correct index title from markets trace
-* rename whole thing to ignore child's farm and become brand less (extra file of customer settings?)
+*DONE correct index title from markets trace
+*DONE rename whole thing to ignore child's farm and become brand less (extra file of customer settings?)
 * add front page showing summary of all tables
 *DONE calculate sales estimates
-* think about how sales periods are generated with import
+*DONE think about how sales periods are generated with import
 * get heavy lifting done separately
 * set secure passwords
-* try using djangobone to create clientside tables or django jqgrid
-* improve appearance of grid
-* create/find favicon
+* use bootstrap to prettify things
+* try using djangobone to create clientside tables - use handsontable
+*DONE create/find favicon
 * setup django authentication
 * setup script to move to server, straight from github
+* possibly split ExcelImportExport right off, with handsontable(??) - probably not, leave excel as backend output
+* add suppliers
+* add sku groups
+* add seasonal variation instances
+* add promotion instances
+* add sales rate factor to customers
+* confirm forcasts
+* add output: sku
+* add output: sku group
+* orders required

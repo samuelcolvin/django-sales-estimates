@@ -15,7 +15,7 @@ class BasicModel(models.Model):
         abstract = True
     
 class OrderGroup(BasicModel):
-    nominal_price = models.DecimalField('Nominal price per unit', max_digits=6, decimal_places=4, null=True)
+    nominal_price = models.DecimalField('Nominal price per unit', max_digits=11, decimal_places=4, null=True)
     minimum_order = models.IntegerField(default=0)
     lead_time = models.IntegerField('Lead Time (days)', default=0)
     
@@ -37,7 +37,7 @@ class OrderGroup(BasicModel):
 class CostLevel(models.Model):
     order_group = models.ForeignKey(OrderGroup, related_name='costlevels')
     order_quantity = models.IntegerField(default=0)
-    price = models.DecimalField('Price per unit', max_digits=6, decimal_places=2)
+    price = models.DecimalField('Price per unit', max_digits=11, decimal_places=2)
     
     def str_price(self):
         return price_str(self.price)
@@ -99,7 +99,7 @@ class Assembly(BasicModel):
 
 class SKU(BasicModel):
     assemblies = models.ManyToManyField(Assembly, related_name='skus')
-    dft_price = models.DecimalField('Default Sales Price', max_digits=6, decimal_places=2, null = True)
+    dft_price = models.DecimalField('Default Sales Price', max_digits=11, decimal_places=2, null = True)
     dft_sale_rate = models.FloatField('Default Sale Rate', null = True)
     
     def assembly_count(self):
@@ -136,7 +136,7 @@ class Customer(BasicModel):
 class CustomerSKU(models.Model):
     sku = models.ForeignKey(SKU, related_name='c_skus')
     customer = models.ForeignKey(Customer, related_name='c_skus')
-    price = models.DecimalField('Sales Price', max_digits=6, decimal_places=2, null=True)
+    price = models.DecimalField('Sales Price', max_digits=11, decimal_places=2, null=True)
     sale_rate = models.FloatField('Sale Rate', null = True)
     xl_id = models.IntegerField('Excel ID', default=-1)
     
@@ -148,9 +148,6 @@ class CustomerSKU(models.Model):
     
     def str_price(self):
         return price_str(self.price)
-    
-#     def sku_sales(self):
-#         return SKUSales.objects.filter()
         
     def __unicode__(self):
         return '%s for %s' % (self.sku.name, self.customer.name)
@@ -217,16 +214,15 @@ class CustomerSalesPeriod(models.Model):
 class SKUSales(models.Model):
     period = models.ForeignKey(CustomerSalesPeriod, related_name='sku_sales')
     csku = models.ForeignKey(CustomerSKU, related_name='sku_sales')
-    sales = models.FloatField(default=0)
+    sales = models.FloatField('Number of SKUs sold', default=0)
     xl_id = models.IntegerField('Excel ID', default=-1)
+    income = models.DecimalField('Income from sales', max_digits=11, decimal_places=4, default = 0)
+    cost = models.DecimalField('cost of SKUs sold', max_digits=11, decimal_places=4, default = 0)
     
 #     imex_fields = ['xl_id', 'period.period', 'csku', 'sales']
 #     imex_order = 7
 #     import_extra_func = 'import_SalesPeriod'
 #     export_cls = 'SKUSalesExtra'
-
-    def income(self):
-        return self.sales * self.csku.price
     
     def sku_name(self):
         return self.csku.sku_name()
