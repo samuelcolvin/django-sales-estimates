@@ -1,4 +1,4 @@
-cf-sales-estimates
+django-sales-estimates
 ==================
 
-Django Sales Estimates Site for Child's Farm
+Django Sales Estimates
