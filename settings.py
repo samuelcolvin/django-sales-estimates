@@ -169,6 +169,9 @@ SHORT_DATETIME_FORMAT = DATETIME_FORMAT
 #Skeletal Dispaly Settings
 DISPLAY_APPS = ['SalesEstimates']
 SITE_TITLE = 'TEST'
+EXTRA_TOP_RIGHT_MENU = [{'url': 'generate', 'name': 'Generate Sales Estimates'}, 
+					{'url': 'upload', 'name': 'Import'}, 
+					{'url': 'download', 'name': 'Export'}]
 
 #ExcelImportExport Settings
 IMEX_APP = 'SalesEstimates'

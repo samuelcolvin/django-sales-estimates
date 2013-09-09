@@ -94,7 +94,7 @@ class SalesPeriod(SkeletalDisplay.ModelDisplay):
 
 class CustomerSKU(SkeletalDisplay.ModelDisplay):
 	index = 5
-	attached_tables = [{'name':'SKUSales', 'table':'Table2', 'populate':'sku_sale', 'title':'SKU Sales Estimates'}]
+	attached_tables = [{'name':'SKUSales', 'table':'Table2', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
 	
 	class Table(tables.Table):
 		customer_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'CustomerSKU', A('pk')], verbose_name='Customer')
