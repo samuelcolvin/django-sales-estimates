@@ -50,7 +50,7 @@ else:
 	 	    }
 	 	}
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/London'
 
 LANGUAGE_CODE = 'en-gb'
 
