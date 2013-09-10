@@ -23,8 +23,6 @@ def perform_export():
     return (file_mdl.xlfile.url, logger.get_log())
 
 def perform_import(fname, delete_first):
-    if not fname.endswith('.xlsx'):
-        raise Exception('File must be xlsx, not xls or any other format.')
     logger = SkeletalDisplay.Logger()
     if delete_first:
         SalesEstimates.worker.delete_before_upload(logger.addline)

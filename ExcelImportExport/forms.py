@@ -17,6 +17,9 @@ def display(request):
     if request.method == 'POST':
         form = ExcelUploadForm(request.POST, request.FILES)
         if form.is_valid():
+            if not str(request.FILES['xlfile']).endswith('.xlsx'):
+                form = ExcelUploadForm()
+                return (form, 'File must be xlsx, not xls or any other format.')
             newfile = m.ExcelFiles(xlfile = request.FILES['xlfile'], source='UP')
             newfile.save()
             fname = newfile.xlfile.path
