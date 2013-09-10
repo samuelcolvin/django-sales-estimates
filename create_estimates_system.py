@@ -31,7 +31,7 @@ def setup_settings(project_name):
     db_finds=list(re.finditer(r'DATABASES *=',text))
     open(settings_fname, 'w').write(text)
     print '---------------\nProject name changed in %s\n' % settings_fname
-    if len(db_finds) != 2:
+    if len(db_finds) < 2:
         print 'unable to find DATABASE info, not setting database'
         return
     print 'Setting DATABASE settings in %s:' % settings_fname
@@ -84,5 +84,5 @@ if __name__ == '__main__':
     if not collectstatic(project_name):
         print 'ERROR collecting statics or syncing, exitting'
         sys.exit(2)
-    print 'Sales Estimates cloned to %s. You now need to' + \
+    print 'Sales Estimates cloned to %s. You now need to' % project_name + \
         ' set the server to point at this django instance and run it.'
