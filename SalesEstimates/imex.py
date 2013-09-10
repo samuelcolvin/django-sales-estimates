@@ -136,13 +136,16 @@ class SalesPeriod(ExcelImportExport.ImExBase):
             for col in self._col_customers:
                 customer = m.Customer.objects.get(xl_id = self._col_customers[col])
                 value = self._ws.cell(row = row, column = col).value
-                csps = m.CustomerSalesPeriod.objects.filter(customer=customer, period = sales_period)
-                if csps.count() > 0:
-                    csp = csps[0]
-                else:
-                    csp = m.CustomerSalesPeriod(customer=customer, period = sales_period)
-                csp.store_count = value
-                csp.save()
+                if value != None and value != 0:
+                    csps = m.CustomerSalesPeriod.objects.filter(customer=customer, period = sales_period)
+                    if csps.count() > 0:
+                        csp = csps[0]
+                        csps.exclude(pk=csp.pk)
+                        csps.delete()
+                    else:
+                        csp = m.CustomerSalesPeriod(customer=customer, period = sales_period)
+                    csp.store_count = value
+                    csp.save()
             
     class ExportExtra(ExcelImportExport.RedExtra):
         def __init__(self, ws, firstcol):
