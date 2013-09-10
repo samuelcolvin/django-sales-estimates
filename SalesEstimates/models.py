@@ -22,7 +22,7 @@ class OrderGroup(BasicModel):
     def cost(self, orders):
         lowest_qp=0
         for cl in self.costlevels.order_by('-order_quantity'):
-            lowest_qp = float(cl.price)
+            lowest_qp = cl.price
             if cl.order_quantity < orders:
                 return lowest_qp
         return lowest_qp

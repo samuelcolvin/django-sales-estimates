@@ -26,16 +26,29 @@ if ON_SERVER:
 	    }
 	}
 else:
-	DATABASES = {
- 	    'default': {
- 	        'ENGINE': 'django.db.backends.sqlite3',
- 	        'NAME': os.path.join(SITE_ROOT, 'sqlite.db'),
- 	        'USER': '',
- 	        'PASSWORD': '',
- 	        'HOST': '',
- 	        'PORT': '',
- 	    }
- 	}
+	USE_LOCAL_MYSQL = True
+	if USE_LOCAL_MYSQL:
+		DATABASES = {
+		    'default': {
+		        'ENGINE': 'django.db.backends.mysql',
+		        'NAME': 'sales_estimates',
+		        'USER': 'sc_free',
+		        'PASSWORD': '',
+		        'HOST': '127.0.0.1',
+		        'PORT': '3603',
+		    }
+		}
+	else:
+		DATABASES = {
+	 	    'default': {
+	 	        'ENGINE': 'django.db.backends.sqlite3',
+	 	        'NAME': os.path.join(SITE_ROOT, 'sqlite.db'),
+	 	        'USER': '',
+	 	        'PASSWORD': '',
+	 	        'HOST': '',
+	 	        'PORT': '',
+	 	    }
+	 	}
 
 TIME_ZONE = 'UTC'
 
@@ -172,6 +185,7 @@ SITE_TITLE = 'TEST'
 EXTRA_TOP_RIGHT_MENU = [{'url': 'generate', 'name': 'Generate Sales Estimates'}, 
 					{'url': 'upload', 'name': 'Import'}, 
 					{'url': 'download', 'name': 'Export'}]
+LOGIN_REDIRECT_URL = '/'
 
 #ExcelImportExport Settings
 IMEX_APP = 'SalesEstimates'
