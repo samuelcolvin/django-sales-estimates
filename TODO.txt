@@ -21,7 +21,7 @@
 * try using djangobone to create clientside tables - use handsontable
 *DONE create/find favicon
 *DONE setup django authentication
-* add account settings page and script to create users
+* add account settings page and script to create users?? http://docs.django-userena.org/en/latest/index.html
 *DONE setup script to move to server straight from github
 * add function to remove spaces from above
 * possibly split ExcelImportExport right off, with handsontable(??) - probably not, leave excel as backend output
