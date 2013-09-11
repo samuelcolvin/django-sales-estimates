@@ -1,9 +1,12 @@
 <h4>{{title}}</h4>
 <form action="" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-	{{ upload_form.non_form_errors.as_ul }}
-	{{ upload_form }}
-    <p><input type="submit" value="Upload" /></p>
+{% load bootstrap3 %}
+{% csrf_token %}
+{{ upload_form.non_form_errors.as_ul }}
+{% bootstrap_form_buttons %}
+{% bootstrap_form upload_form %}
+<p><input type="submit" value="Upload" class="btn btn-default" /></p>
+{% end_bootstrap_form_buttons %}
 </form>
 <p><strong>Press generate after uploading data or editting anything before attempting to download results in excel.</strong></p>
 {% if log %}

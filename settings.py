@@ -136,6 +136,7 @@ INSTALLED_APPS = [
     'SkeletalDisplay',
     'ExcelImportExport',
 	'django_tables2',
+	'bootstrap3',
 ]
 
 if not ON_SERVER:
