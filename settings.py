@@ -75,8 +75,8 @@ MEDIA_URL = '/media/'
 MEDIA_RELATIVE_ROOT = 'media'
 MEDIA_ROOT = os.path.join(SITE_ROOT, MEDIA_RELATIVE_ROOT)
 if ON_SERVER:
- 	SCRIPT_NAME = ''
- 	FORCE_SCRIPT_NAME = ''
+	SCRIPT_NAME = ''
+	FORCE_SCRIPT_NAME = ''
 
 STATICFILES_DIRS = ()
 
@@ -183,10 +183,12 @@ SHORT_DATETIME_FORMAT = DATETIME_FORMAT
 #Skeletal Dispaly Settings
 DISPLAY_APPS = ['SalesEstimates']
 SITE_TITLE = 'TEST'
-EXTRA_TOP_RIGHT_MENU = [{'url': 'generate', 'name': 'Generate Sales Estimates'}, 
+TOP_MENU = [{'url': 'display_index', 'name': 'Model Display'}, 
+					{'url': 'generate', 'name': 'Regenerate'}, 
 					{'url': 'upload', 'name': 'Import'}, 
 					{'url': 'download', 'name': 'Export'}]
 LOGIN_REDIRECT_URL = '/'
+INTERNAL_IPS = ('127.0.0.1',)
 
 #ExcelImportExport Settings
 IMEX_APP = 'SalesEstimates'

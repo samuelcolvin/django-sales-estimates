@@ -14,20 +14,37 @@ def perform_export():
     tmp_fname = 'tmp.xlsx'
     if settings.ON_SERVER:
         tmp_fname = os.path.join(settings.SITE_ROOT,  tmp_fname)
-    WriteXl(tmp_fname, logger.addline)
-    f_tmp = open(tmp_fname, 'r')
-    file_mdl = ExcelImportExport.models.ExcelFiles()
-    file_mdl.xlfile.save(tmp_fname, File(f_tmp))
-    file_mdl.source = 'DL'
-    file_mdl.save()
-    return (file_mdl.xlfile.url, logger.get_log())
+    content = {}
+    try:
+        WriteXl(tmp_fname, logger.addline)
+    except Exception, e:
+        content['error'] = 'ERROR: %s' % str(e)
+    else:
+        f_tmp = open(tmp_fname, 'r')
+        file_mdl = ExcelImportExport.models.ExcelFiles()
+        file_mdl.xlfile.save(tmp_fname, File(f_tmp))
+        file_mdl.source = 'DL'
+        file_mdl.save()
+        content['download_url'] = file_mdl.xlfile.url
+        content['success'] = 'Document Successfully Uploaded'
+    finally:
+        content['info'] = logger.get_log()
+    return content
 
 def perform_import(fname, delete_first):
+    content={}
     logger = SkeletalDisplay.Logger()
-    if delete_first:
-        SalesEstimates.worker.delete_before_upload(logger.addline)
-    ReadXl(fname, logger.addline)
-    return logger.get_log()
+    try:
+        if delete_first:
+            SalesEstimates.worker.delete_before_upload(logger.addline)
+        ReadXl(fname, logger.addline)
+    except Exception, e:
+        content['error'] = 'ERROR: %s' % str(e)
+    else:
+        content['success'] = 'Document Successfully Uploaded'
+    finally:
+        content['info'] = logger.get_log()
+    return content
 
 class _ImportExport:
     def get_models(self):
