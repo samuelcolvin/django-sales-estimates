@@ -15,9 +15,16 @@ import time
 def generate(request):
     apps = SkeletalDisplay.get_display_apps()
     logger = SkeletalDisplay.Logger()
-    generate_auto_sales_figures(logger.addline)
-    content = {'log': logger.get_log()}
-    return skeletal_base(request, 'Generate Sales Estimates', content, 'generate.html', apps)
+    content = {}
+    try:
+        generate_auto_sales_figures(logger.addline)
+    except Exception, e:
+        content['error'] = 'ERROR: %s' % str(e)
+    else:
+        content['success'] = 'Sales Estimates Successfully Updated'
+    finally:
+        content['info'] = logger.get_log()
+    return skeletal_base(request, 'Generate Sales Estimates', content, 'generate.html', apps, top_active='generate')
 
 def generate_sales_periods(log):
     start_date = dtdt.strptime(settings.SALES_PERIOD_START_DATE, settings.CUSTOM_DATE_FORMAT)
