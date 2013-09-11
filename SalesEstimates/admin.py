@@ -43,6 +43,11 @@ class CustomerAdmin(admin.ModelAdmin):
     
 admin.site.register(m.Customer, CustomerAdmin)
 
+class CustomerSKUAdmin(admin.ModelAdmin):
+    list_display = ('sku', 'customer', 'str_price', 'sale_rate')
+    
+admin.site.register(m.CustomerSKU, CustomerSKUAdmin)
+
 class CustomerSalesPeriodInline(admin.TabularInline):
     model = m.CustomerSalesPeriod
     extra = 5

@@ -6,9 +6,10 @@
 *DONE add front end import
 *DONE fix problem with import not generating sales periods
 * think about renaming SKUSales
-* make sure everyting is working and freeze at v0.1
+* use id instead of xl_id
+*DONE make sure everyting is working and freeze at v0.1
 * exlcude some fields from display
-* fix breadcrumbs
+*DONE fix breadcrumbs
 *DONE correct index title from markets trace
 *DONE rename whole thing to ignore child's farm and become brand less (extra file of customer settings?)
 * add front page showing summary incomplete things
@@ -16,9 +17,10 @@
 *DONE think about how sales periods are generated with import
 * get heavy lifting done separately
 * do estimation in c++???
+*DONE update skeletaldisplay README
 *DONE set secure passwords
-* use bootstrap to prettify things
-* try using djangobone to create clientside tables - use handsontable
+*DONE use bootstrap to prettify things
+* use handsontable to create clientside tables with django-rest-framework
 *DONE create/find favicon
 *DONE setup django authentication
 * add account settings page and script to create users?? http://docs.django-userena.org/en/latest/index.html

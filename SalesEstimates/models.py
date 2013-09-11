@@ -1,6 +1,5 @@
 from django.db import models
 import settings
-from django.contrib.auth.models import User
 
 class BasicModel(models.Model):
     name = models.CharField(max_length=200)
@@ -190,7 +189,7 @@ class SalesPeriod(models.Model):
         return (self.finish_date - self.start_date).days
     
     def __unicode__(self):
-        return '%s to %s, %d days' % (self.str_start(), self.str_finish(), self.length_days())
+        return self.str_simple_date()
 
     class Meta:
         verbose_name_plural = 'Sales Periods'
@@ -213,7 +212,7 @@ class CustomerSalesPeriod(models.Model):
 
 class SKUSales(models.Model):
     period = models.ForeignKey(CustomerSalesPeriod, related_name='sku_sales')
-    csku = models.ForeignKey(CustomerSKU, related_name='sku_sales')
+    csku = models.ForeignKey(CustomerSKU, related_name='sku_sales', verbose_name="Customer SKU")
     sales = models.FloatField('Number of SKUs sold', default=0)
     xl_id = models.IntegerField('Excel ID', default=-1)
     income = models.DecimalField('Income from sales', max_digits=11, decimal_places=4, default = 0)
@@ -231,7 +230,7 @@ class SKUSales(models.Model):
         return self.period.period.str_simple_date()
     
     def __unicode__(self):
-        return '%s sells %d at %s in %s' % (self.sku_name(), self.sales, self.period.customer.name,  
+        return '%s sells %d at %s in %s' % (self.sku_name(), self.sales, self.csku.customer.name,  
                                             self.period.period.str_simple_date())
     
     class Meta:
