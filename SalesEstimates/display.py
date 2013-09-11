@@ -136,6 +136,8 @@ class SKUSales(SkeletalDisplay.ModelDisplay):
 	class Table(tables.Table):
 		sku_name = tables.LinkColumn('display_item', args=['SalesEstimates', 'SKUSales', A('pk')])
 		sales = tables.Column(verbose_name='Number of Sales')
+		cost = tables.Column(verbose_name='Cost of Sales')
+		income = tables.Column(verbose_name='Income from Sales')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 	
