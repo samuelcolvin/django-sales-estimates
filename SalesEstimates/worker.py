@@ -85,7 +85,7 @@ def generate_auto_sales_figures(log):
     decimal.getcontext().prec = 4
     sku_sales_toadd = []
     for csp in m.CustomerSalesPeriod.objects.all().iterator():
-        for csku in m.CustomerSKU.objects.all().iterator():
+        for csku in m.CustomerSKU.objects.filter(customer=csp.customer).iterator():
             if csp.store_count != None and csku.sale_rate != None:
                 sku_sales = m.SKUSales(period=csp, csku=csku)
                 sku_count += 1
@@ -100,18 +100,18 @@ def generate_auto_sales_figures(log):
     all_order_groups = m.OrderGroup.objects.all()
     with transaction.commit_on_success():
         for period in m.SalesPeriod.objects.all().iterator():
-            order_group_info = {}
+            order_group_costs = {}
             for order_group in all_order_groups:
-                sku_sales_group_period = m.SKUSales.objects.filter(period=period).filter(csku__sku__assemblies__components__order_group=order_group)
+                sku_sales_group_period = m.SKUSales.objects.filter(period__period=period).filter(csku__sku__assemblies__components__order_group=order_group).distinct()
                 orders = calc_total_sales(sku_sales_group_period)
                 cost = 0
                 if orders is not None:
-                    cost = order_group.cost(orders)*decimal.Decimal(orders)
-                order_group_info[order_group.pk] = cost
+                    cost = order_group.cost(orders)
+                order_group_costs[order_group.pk] = cost
             for sku_sales in m.SKUSales.objects.filter(period__period = period).iterator():
-                order_groups = m.Component.objects.filter(order_group__components__assemblies__skus__c_skus__sku_sales = sku_sales).values_list('order_group__pk',flat=True)
-                sku_sales.cost = sum([order_group_info[og] for og in order_groups])
-#                sku_sales.cost = sum(map(lambda og: order_group_info[og], order_groups))
+                order_groups = m.Component.objects.filter(order_group__components__assemblies__skus__c_skus__sku_sales = sku_sales).distinct().values_list('order_group__pk',flat=True)
+                sku_sales.cost = sum([order_group_costs[og] for og in order_groups])*decimal.Decimal(sku_sales.sales)
+#                 sku_sales.cost = sum(map(lambda og: order_group_info[og], order_groups))
                 sku_sales.save()
     diff = time.time() - t
     diff_mid = diff - diff_mid

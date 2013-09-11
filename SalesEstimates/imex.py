@@ -221,7 +221,7 @@ class OutputSheet(ExcelImportExport.ImExBase):
                 sku_sales = m.SKUSales.objects.filter(period = csp, csku__customer=csp.customer)
                 if sku_sales.count() == 0:
                     continue
-                info = sku_sales.aggregate(sales = db_models.Sum('sales'), income = db_models.Sum('cost'), cost = db_models.Sum('income'))
+                info = sku_sales.aggregate(sales = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
                 self._ws.cell(row = row, column=col + 1).value = info['sales']
                 self._ws.cell(row = row, column=col + 2).value = info['cost']
                 self._ws.cell(row = row, column=col + 3).value = info['income']

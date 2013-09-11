@@ -50,6 +50,10 @@ else:
 	 	    }
 	 	}
 
+# Hosts/domain names that are valid for this site; required if DEBUG is False
+# See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
+ALLOWED_HOSTS = []
+
 TIME_ZONE = 'Europe/London'
 
 LANGUAGE_CODE = 'en-gb'
@@ -67,7 +71,6 @@ USE_L10N = False
 
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = False
-
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(SITE_ROOT, 'static')
@@ -94,7 +97,9 @@ TEMPLATE_LOADERS = (
     'django.template.loaders.app_directories.Loader',
 #     'django.template.loaders.eggs.Loader',
 )
-TEMPLATE_CONTEXT_PROCESSORS =("django.contrib.auth.context_processors.auth",
+
+TEMPLATE_CONTEXT_PROCESSORS =(
+	"django.contrib.auth.context_processors.auth",
 	"django.core.context_processors.debug",
 	"django.core.context_processors.i18n",
 	"django.core.context_processors.media",
@@ -122,6 +127,7 @@ TEMPLATE_DIRS = (os.path.join(SITE_ROOT, 'templates'),
 				os.path.join(SITE_ROOT, 'SkeletalDisplay/templates'))
 
 INSTALLED_APPS = [
+	'django_admin_bootstrapped',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
