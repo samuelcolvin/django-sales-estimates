@@ -1,6 +1,5 @@
-<h4>{{title}}</h4>
-{% if log %}
-<div id="message">
-	{{log|safe}}
-</div>
-{% endif %}
+{% extends "page_base.html" %}
+
+{% block maincol_content %}
+	<h4>{{title}}</h4>
+{% endblock %}
