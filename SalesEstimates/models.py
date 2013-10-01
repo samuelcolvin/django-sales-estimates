@@ -12,19 +12,28 @@ class BasicModel(models.Model):
     
     class Meta:
         abstract = True
-    
+        
+class Manufacturer(BasicModel):
+    pass
+    class Meta:
+        verbose_name_plural = 'Manufacturers'
+        verbose_name = 'Manufacturer'
+
 class OrderGroup(BasicModel):
-    nominal_price = models.DecimalField('Nominal price per unit', max_digits=11, decimal_places=4, null=True)
+    nominal_price = models.DecimalField('Nominal price per unit', max_digits=11, decimal_places=4, null=True, blank=True)
     minimum_order = models.IntegerField(default=0)
     lead_time = models.IntegerField('Lead Time (days)', default=0)
+    manufacturer = models.ForeignKey(Manufacturer, related_name='order_group')
     
     def cost(self, orders):
-        lowest_qp=0
-        for cl in self.costlevels.order_by('-order_quantity'):
-            lowest_qp = cl.price
-            if cl.order_quantity < orders:
-                return lowest_qp
-        return lowest_qp
+        costlevels_avail = self.costlevels.filter(order_quantity__lte = orders)
+        if costlevels_avail.exists():
+            return costlevels_avail.order_by('-order_quantity')[0].price
+        else:
+            if self.costlevels.exists():
+                return self.costlevels.order_by('order_quantity')[0].price
+            else:
+                return 0
     
     def str_nominal_price(self):
         return price_str(self.nominal_price)
@@ -52,6 +61,9 @@ class CostLevel(models.Model):
     
     def __unicode__(self):
         return '%s cost: %s @ %d units' % (self.order_group.name, price_str(self.price), self.order_quantity)
+    
+    class Meta:
+        ordering = ['order_quantity']
 
 def price_str(value):
     if value is None:
@@ -64,6 +76,9 @@ def price_str(value):
 
 class Component(BasicModel):
     order_group = models.ForeignKey(OrderGroup, related_name='components')
+    
+    def get_manufacturer(self):
+        return self.order_group.manufacturer
     
     def str_nominal_price(self):
         return self.order_group.str_nominal_price()
@@ -96,10 +111,55 @@ class Assembly(BasicModel):
         verbose_name_plural = 'Assemblies'
         verbose_name = 'Assembly'
 
+        
+class SKUGroup(BasicModel):
+    pass
+
+    class Meta:
+        verbose_name_plural = 'SKU Groups'
+        verbose_name = 'SKU Group'
+
+class SeasonalVariation(BasicModel):
+    pass
+    
+    def month_count(self):
+        return self.months.count()
+    
+    class Meta:
+        verbose_name_plural = 'Seasonal Variations'
+        verbose_name = 'Seasonal Variation'
+
+class MonthVariation(models.Model):
+    MONTHS=(
+        (1, 'January'),
+        (2, 'February'),
+        (3, 'March'),
+        (4, 'April'),
+        (5, 'May'),
+        (6, 'June'),
+        (7, 'July'),
+        (8, 'August'),
+        (9, 'September'),
+        (10, 'October'),
+        (11, 'November'),
+        (12, 'December'),
+    )
+    month = models.IntegerField('Month', choices=MONTHS)
+    srf = models.FloatField('Sale Rate Factor', default=1)
+    season_var = models.ForeignKey(SeasonalVariation, related_name='months')
+    
+    def __unicode__(self):
+        return '%s, rate: %0.2f' % (self.get_month_display(), self.srf)
+    
+    class Meta:
+        unique_together = (('season_var', 'month'),)
+
 class SKU(BasicModel):
     assemblies = models.ManyToManyField(Assembly, related_name='skus')
     dft_price = models.DecimalField('Default Sales Price', max_digits=11, decimal_places=2, null = True)
-    dft_sale_rate = models.FloatField('Default Sale Rate', null = True)
+    dft_srf = models.FloatField('Default Sale Rate Factor', default = 1)
+    dft_season_var = models.ForeignKey(SeasonalVariation, related_name='customers', verbose_name = 'Default Seasonal Variation')
+    group = models.ForeignKey(SKUGroup, related_name='sku')
     
     def assembly_count(self):
         return self.assemblies.count()
@@ -117,13 +177,14 @@ class SKU(BasicModel):
     
     def str_dft_price(self):
         return price_str(self.dft_price)
-        
+    
     class Meta:
         verbose_name_plural = 'SKUs'
         verbose_name = 'SKU'
 
 class Customer(BasicModel):
-    skus = models.ManyToManyField(SKU, related_name='customers', through='CustomerSKU')
+    skus = models.ManyToManyField(SKU, related_name='customers')
+    dft_srf = models.FloatField('Default Sale Rate Factor', default = 1)
     
     def sku_count(self):
         return self.skus.count()
@@ -132,11 +193,13 @@ class Customer(BasicModel):
         verbose_name_plural = 'Customers'
         verbose_name = 'Customer'
 
-class CustomerSKU(models.Model):
+class CustomerSKUInfo(models.Model):
     sku = models.ForeignKey(SKU, related_name='c_skus')
     customer = models.ForeignKey(Customer, related_name='c_skus')
     price = models.DecimalField('Sales Price', max_digits=11, decimal_places=2, null=True)
-    sale_rate = models.FloatField('Sale Rate', null = True)
+    srf = models.FloatField('Sale Rate Factor', null = True)
+    custom_srf = models.BooleanField('Has Custom Sale Rate Factor', default= True)
+    season_var = models.ForeignKey(SeasonalVariation, related_name='customer_skus', null = True)
     xl_id = models.IntegerField('Excel ID', default=-1)
     
     def sku_name(self):
@@ -152,21 +215,24 @@ class CustomerSKU(models.Model):
         return '%s for %s' % (self.sku.name, self.customer.name)
         
     class Meta:
-        verbose_name_plural = 'Customer SKUs'
-        verbose_name = 'Customer SKU'
+        verbose_name_plural = 'Customer SKU Information'
+        verbose_name = 'Customer SKU Information'
     
     def save(self, *args, **kwargs):
-        super(CustomerSKU, self).save(*args, **kwargs)
-        edited = False
+        super(CustomerSKUInfo, self).save(*args, **kwargs)
+        editted = False
         if self.price is None and self.sku.dft_price is not None:
             self.price = self.sku.dft_price
-            edited = True
-        if self.sale_rate is None and self.sku.dft_sale_rate is not None:
-            self.sale_rate = self.sku.dft_sale_rate
-            edited = True
-        if edited:
+            editted = True
+        if self.srf is None:
+            self.srf = self.sku.dft_srf * self.customer.dft_srf
+            self.custom_srf = False
+            editted = True
+        if self.season_var is None:
+            self.season_var = self.sku.dft_season_var
+            editted = True
+        if editted:
             self.save()
-    
 
 class SalesPeriod(models.Model):
     start_date = models.DateField()
@@ -212,7 +278,7 @@ class CustomerSalesPeriod(models.Model):
 
 class SKUSales(models.Model):
     period = models.ForeignKey(CustomerSalesPeriod, related_name='sku_sales')
-    csku = models.ForeignKey(CustomerSKU, related_name='sku_sales', verbose_name="Customer SKU")
+    csku = models.ForeignKey(CustomerSKUInfo, related_name='sku_sales', verbose_name="Customer SKU")
     sales = models.FloatField('Number of SKUs sold', default=0)
     xl_id = models.IntegerField('Excel ID', default=-1)
     income = models.DecimalField('Income from sales', max_digits=11, decimal_places=4, default = 0)

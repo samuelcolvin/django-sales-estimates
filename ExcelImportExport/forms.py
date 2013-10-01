@@ -3,19 +3,20 @@ from django import forms
 import ExcelImportExport.models as m
 import ExcelImportExport.ImportExport as imex
 import SkeletalDisplay
-from SkeletalDisplay.views import base as skeletal_base
+import SkeletalDisplay.views_base as viewb
 import SalesEstimates.worker
 import settings, os
 from django.core.files import File
+from django.shortcuts import render
 
 def perform_export():
     logger = SkeletalDisplay.Logger()
     tmp_fname = 'tmp.xlsx'
     if settings.ON_SERVER:
         tmp_fname = os.path.join(settings.SITE_ROOT,  tmp_fname)
-    WriteXl(tmp_fname, logger.addline)
+    imex.WriteXl(tmp_fname, logger.addline)
     f_tmp = open(tmp_fname, 'r')
-    file_mdl = ExcelImportExport.models.ExcelFiles()
+    file_mdl = imex.ExcelImportExport.models.ExcelFiles()
     file_mdl.xlfile.save(tmp_fname, File(f_tmp))
     file_mdl.source = 'DL'
     file_mdl.save()
@@ -25,7 +26,7 @@ def perform_import(fname, delete_first):
     logger = SkeletalDisplay.Logger()
     if delete_first:
         SalesEstimates.worker.delete_before_upload(logger.addline)
-    ReadXl(fname, logger.addline)
+    imex.ReadXl(fname, logger.addline)
     return logger.get_log()
 
 
@@ -36,7 +37,6 @@ class ExcelUploadForm(forms.Form):
     )
 
 def display(request):
-    # Handle file upload
     fname = None
     if request.method == 'POST':
         form = ExcelUploadForm(request.POST, request.FILES)
@@ -57,10 +57,13 @@ def upload(request):
     content['upload_form'] = upload_form
     if fname != None:
         content.update(imex.perform_import(fname, True))
-    apps = SkeletalDisplay.get_display_apps()
-    return skeletal_base(request, 'Import Files', content, 'upload.html', apps, top_active='upload')
+    
+    content['title'] = 'Import Files'
+    content.update(viewb.basic_context(request, 'upload'))
+    return render(request, 'upload.html', content)
 
 def download(request):
     content = imex.perform_export()
-    apps = SkeletalDisplay.get_display_apps()
-    return skeletal_base(request, 'Download Files', content, 'download.html', apps, top_active='download')
+    content['title'] = 'Download Files'
+    content.update(viewb.basic_context(request, 'download'))
+    return render(request, 'download.html', content)

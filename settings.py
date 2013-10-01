@@ -126,28 +126,25 @@ WSGI_APPLICATION = 'wsgi.application'
 TEMPLATE_DIRS = (os.path.join(SITE_ROOT, 'templates'),
 				os.path.join(SITE_ROOT, 'SkeletalDisplay/templates'))
 
-INSTALLED_APPS = [
-	'django_admin_bootstrapped',
+INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    # 'django.contrib.sites',
+    'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Uncomment the next line to enable the admin:
+	
     'django.contrib.admin',
-    # Uncomment the next line to enable admin documentation:
-    # 'django.contrib.admindocs',
-    'SalesEstimates',
-    'SkeletalDisplay',
-    'ExcelImportExport',
+    'django.contrib.admindocs',
+    'rest_framework',
 	'django_tables2',
-	'bootstrap3',
-]
-
-if not ON_SERVER:
-	INSTALLED_APPS.append('south')
-INSTALLED_APPS = tuple(INSTALLED_APPS)
+	'bootstrapform',
+    'HotDjango',
+    'SkeletalDisplay',
+    'SalesEstimates',
+    'ExcelImportExport',
+    'south'
+)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -187,19 +184,21 @@ DATETIME_FORMAT = 'Y-m-d H:i:s'
 SHORT_DATETIME_FORMAT = DATETIME_FORMAT
 
 #Skeletal Dispaly Settings
-DISPLAY_APPS = ['SalesEstimates']
+DISPLAY_APPS = ['SalesEstimates', 'SkeletalDisplay']
+HOT_PERMITTED_GROUPS = 'all'
+LOGIN_REQUIRED = True
+LOGIN_REDIRECT_URL = '/'
+
 SITE_TITLE = 'TEST'
-TOP_MENU = [{'url': 'display_index', 'name': 'Model Display'}, 
-					{'url': 'generate', 'name': 'Regenerate'}, 
-					{'url': 'upload', 'name': 'Import'}, 
-					{'url': 'download', 'name': 'Export'}]
+TOP_MENU = [{'url': 'display_index', 'name': 'Models'},
+			{'url': 'generate', 'name': 'Regenerate'}, 
+			{'url': 'upload', 'name': 'Import'}, 
+			{'url': 'download', 'name': 'Export'}]
 LOGIN_REDIRECT_URL = '/'
 INTERNAL_IPS = ('127.0.0.1',)
 
 #ExcelImportExport Settings
 IMEX_APP = 'SalesEstimates'
-
-#Sales Estimates
 
 #sales period length on months
 SALES_PERIOD_START_DATE = '2013-01-01'

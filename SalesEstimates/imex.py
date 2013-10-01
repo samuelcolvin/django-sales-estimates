@@ -82,7 +82,7 @@ class Assembly(ExcelImportExport.ImExBase):
             ExcelImportExport.M2MExport.__init__(self, *args, **kwargs)
     
 class SKU(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields + ['dft_price', 'dft_sale_rate']
+    imex_fields = ExcelImportExport.default_imex_fields + ['dft_price', 'dft_sale_rate_factor']
     imex_order = 3
     model = m.SKU
     
@@ -104,7 +104,7 @@ class Customer(ExcelImportExport.ImExBase):
     model = m.Customer
                 
 class CustomerSKU(ExcelImportExport.ImExBase):
-    imex_fields = ['xl_id', 'sku', 'customer', 'price', 'sale_rate']
+    imex_fields = ['xl_id', 'sku', 'customer', 'price', 'sale_rate_factor']
     imex_order = 5
     model = m.CustomerSKU
     
