@@ -7,24 +7,27 @@ from django.db import models as db_models
 import inspect, operator
 
 import SkeletalDisplay
-from SkeletalDisplay.views import base as skeletal_base
+import SkeletalDisplay.views_base as viewb
 import decimal
 from django.db import transaction
 import time
 
+from django.shortcuts import render
+
 def generate(request):
-    apps = SkeletalDisplay.get_display_apps()
     logger = SkeletalDisplay.Logger()
     content = {}
     try:
         generate_auto_sales_figures(logger.addline)
     except Exception, e:
-        content['error'] = 'ERROR: %s' % str(e)
+        content['errors'] = ['ERROR: %s' % str(e)]
     else:
-        content['success'] = 'Sales Estimates Successfully Updated'
+        content['success'] = ['Sales Estimates Successfully Updated']
     finally:
         content['info'] = logger.get_log()
-    return skeletal_base(request, 'Generate Sales Estimates', content, 'generate.html', apps, top_active='generate')
+    
+    content.update(viewb.basic_context(request, 'generate'))
+    return render(request, 'generate.html', content)
 
 def generate_sales_periods(log):
     start_date = dtdt.strptime(settings.SALES_PERIOD_START_DATE, settings.CUSTOM_DATE_FORMAT)
@@ -86,10 +89,10 @@ def generate_auto_sales_figures(log):
     sku_sales_toadd = []
     for csp in m.CustomerSalesPeriod.objects.all().iterator():
         for csku in m.CustomerSKU.objects.filter(customer=csp.customer).iterator():
-            if csp.store_count != None and csku.sale_rate != None:
+            if csp.store_count != None and csku.sale_rate_factor != None:
                 sku_sales = m.SKUSales(period=csp, csku=csku)
                 sku_count += 1
-                sku_sales.sales = csp.store_count * csku.sale_rate * settings.SALES_PERIOD_LENGTH * 4
+                sku_sales.sales = csp.store_count * csku.sale_rate_factor * settings.SALES_PERIOD_LENGTH * 4
                 sku_sales.income = decimal.Decimal(sku_sales.sales) * sku_sales.csku.price
                 sku_sales_toadd.append(sku_sales)
     m.SKUSales.objects.bulk_create(sku_sales_toadd)
@@ -111,7 +114,6 @@ def generate_auto_sales_figures(log):
             for sku_sales in m.SKUSales.objects.filter(period__period = period).iterator():
                 order_groups = m.Component.objects.filter(order_group__components__assemblies__skus__c_skus__sku_sales = sku_sales).distinct().values_list('order_group__pk',flat=True)
                 sku_sales.cost = sum([order_group_costs[og] for og in order_groups])*decimal.Decimal(sku_sales.sales)
-#                 sku_sales.cost = sum(map(lambda og: order_group_info[og], order_groups))
                 sku_sales.save()
     diff = time.time() - t
     diff_mid = diff - diff_mid

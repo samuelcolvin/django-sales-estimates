@@ -4,3 +4,6 @@
 [submodule "se/SkeletalDisplay"]
 	path = se/SkeletalDisplay
 	url = ../django-skeletal-display.git
+[submodule "HotDjango"]
+	path = HotDjango
+	url = ../django-hot.git

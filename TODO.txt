@@ -8,7 +8,7 @@
 * think about renaming SKUSales
 * use id instead of xl_id
 *DONE make sure everyting is working and freeze at v0.1
-* exlcude some fields from display
+*DONE exlcude some fields from display
 *DONE fix breadcrumbs
 *DONE correct index title from markets trace
 *DONE rename whole thing to ignore child's farm and become brand less (extra file of customer settings?)
@@ -20,20 +20,29 @@
 *DONE update skeletaldisplay README
 *DONE set secure passwords
 *DONE use bootstrap to prettify things
-* use handsontable to create clientside tables with django-rest-framework
+*DONE use handsontable to create clientside tables with django-rest-framework
 *DONE create/find favicon
 *DONE setup django authentication
 * add account settings page and script to create users?? http://docs.django-userena.org/en/latest/index.html
 *DONE setup script to move to server straight from github
 * add function to remove spaces from above
 * possibly split ExcelImportExport right off, with handsontable(??) - probably not, leave excel as backend output
-* add suppliers
-* add sku groups
-* add seasonal variation instances
-* add promotion instances
-* add sales rate factor to customers
+*DONE add suppliers
+*DONE add sku groups
+*DONE add seasonal variation instances
+*DONE add sales rate factor to customers
+* changed models to process, add tabs set as index page. *************************************
+* process in three(?) steps
+* add promotion instances - containing skus, customers, start/finish dates
+* get formsets working properly as in through different class
 * confirm forcasts
 * add output: sku
 * add output: sku group
 * orders required
 * add summary of incomplete things
+* test calculation completely to check it's right
+* use numeral.js for formatting values in display page
+* add "paste mode" to django-hot
+*DONE edit templates so HOT works with multiple tags in the same page
+*DONE get formsets working in add/edit page
+    
