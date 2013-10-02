@@ -13,8 +13,8 @@ class Manufacturer(SkeletalDisplay.ModelDisplay):
 	index = -1
 	attached_tables = [{'name':'OrderGroup', 'populate':'order_group', 'title':'Order Groups'}]
 	
-	class DjangoTable(tables.Table):
-		name = tables.LinkColumn('display_item', args=[app_name, 'Manufacturer', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 	
@@ -26,7 +26,7 @@ class CostLevel(SkeletalDisplay.ModelDisplay):
 	model = m.CostLevel
 	display = False
 	
-	class DjangoTable(tables.Table):
+	class DjangoTable(SkeletalDisplay.Table):
 		order_quantity = tables.Column(verbose_name='Quantity')
 		str_price = tables.Column(verbose_name='Price per unit')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
@@ -44,8 +44,8 @@ class OrderGroup(SkeletalDisplay.ModelDisplay):
 	
 	index = 0
 	
-	class DjangoTable(tables.Table):
-		name = tables.LinkColumn('display_item', args=[app_name, 'OrderGroup', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
 		manufacturer = tables.Column(verbose_name='Manufacturer')
 		str_nominal_price = tables.Column(verbose_name='Nominal Price')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
@@ -63,8 +63,8 @@ class Component(SkeletalDisplay.ModelDisplay):
 	attached_tables = [{'name':'Assembly', 'populate':'assemblies', 'title':'Assemblies Using this Component'}]
 	index = 1
 	
-	class DjangoTable(tables.Table):
-		name = tables.LinkColumn('display_item', args=[app_name, 'Component', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
 		str_nominal_price = tables.Column(verbose_name='Nominal Price')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			exclude = ('id', 'description', 'nominal_price', 'xl_id')
@@ -80,8 +80,8 @@ class Assembly(SkeletalDisplay.ModelDisplay):
 	attached_tables = [{'name':'Component', 'populate':'components', 'title':'Components'}]
 	index = 2
 	
-	class DjangoTable(tables.Table):
-		name = tables.LinkColumn('display_item', args=[app_name, 'Assembly', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
 		component_count = tables.Column(verbose_name='Components')
 		str_nominal_raw_cost = tables.Column(verbose_name='Nominal Cost')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
@@ -96,8 +96,8 @@ class SKUGroup(SkeletalDisplay.ModelDisplay):
 	model = m.SKUGroup
 	index = 2.5
 	
-	class DjangoTable(tables.Table):
-		name = tables.LinkColumn('display_item', args=[app_name, 'SKUGroup', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 	
@@ -117,7 +117,7 @@ class MonthVariation(SkeletalDisplay.ModelDisplay):
 	model = m.MonthVariation
 	display = False
 	
-	class DjangoTable(tables.Table):
+	class DjangoTable(SkeletalDisplay.Table):
 		get_month_display = tables.Column()
 		srf = tables.Column(verbose_name='Sales Rate Factor')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
@@ -134,8 +134,8 @@ class SeasonalVariation(SkeletalDisplay.ModelDisplay):
 	attached_tables = [{'name':'MonthVariation', 'populate':'months', 'title':'Variation Months'}]
 	index = 2.75
 	
-	class DjangoTable(tables.Table):
-		name = tables.LinkColumn('display_item', args=[app_name, 'SeasonalVariation', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
 		month_count = tables.Column(verbose_name='Variation Months')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
@@ -151,8 +151,8 @@ class SKU(SkeletalDisplay.ModelDisplay):
 	attached_tables = [{'name':'Assembly', 'populate':'assemblies', 'title':'Included Assemblies'}]
 	index = 3
 	
-	class DjangoTable(tables.Table):
-		name = tables.LinkColumn('display_item', args=[app_name, 'SKU', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
 		assembly_count = tables.Column(verbose_name='Assemblies')
 		str_dft_price = tables.Column(verbose_name='Default Price')
 		str_nominal_raw_cost = tables.Column(verbose_name='Nominal Raw Cost')
@@ -174,8 +174,8 @@ class Customer(SkeletalDisplay.ModelDisplay):
 					{'name':'CustomerSalesPeriod', 'populate':'c_sales_periods', 'title':'Sales Periods'}]
 	index = 4
 	
-	class DjangoTable(tables.Table):
-		name = tables.LinkColumn('display_item', args=[app_name, 'Customer', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
 		sku_count = tables.Column(verbose_name='SKUs')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			exclude = ('id', 'description')
@@ -183,16 +183,16 @@ class Customer(SkeletalDisplay.ModelDisplay):
 	class HotTable(HotDjango.ModelSerialiser):
 		skus = HotDjango.IDNameSerialiser(m.SKU, many=True)
 		class Meta:
-			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'skus')
+			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count', 'skus')
 
 class CustomerSKUInfo(SkeletalDisplay.ModelDisplay):
 	model = m.CustomerSKUInfo
 	index = 5
 	attached_tables = [{'name':'SKUSales', 'table':'Table2', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
 	
-	class DjangoTable(tables.Table):
-		customer_name = tables.LinkColumn('display_item', args=[app_name, 'CustomerSKUInfo', A('pk')], verbose_name='Customer')
-		xl_id = tables.Column(verbose_name='Excel ID')
+	class DjangoTable(SkeletalDisplay.Table):
+		customer_name = SkeletalDisplay.SelfLinkColumn(verbose_name='Customer')
+# 		xl_id = tables.Column(verbose_name='Excel ID')
 		sku_name = tables.Column(verbose_name='SKU')
 		str_price = tables.Column(verbose_name='Price')
 		srf = tables.Column(verbose_name='Sale Rate')
@@ -200,8 +200,8 @@ class CustomerSKUInfo(SkeletalDisplay.ModelDisplay):
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 	
-	class Table2(tables.Table):
-		sku_name = tables.LinkColumn('display_item', args=[app_name, 'SKU', A('sku.pk')], verbose_name='SKU')
+	class Table2(SkeletalDisplay.Table):
+		sku_name = SkeletalDisplay.SelfLinkColumn(verbose_name='SKU')
 		str_price = tables.Column(verbose_name='Price')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
@@ -219,9 +219,8 @@ class SalesPeriod(SkeletalDisplay.ModelDisplay):
 	attached_tables = [{'name':'CustomerSalesPeriod', 'table': 'Table2', 'populate':'c_sales_periods', 'title':'Customers'}]
 	index = 6
 	
-	class DjangoTable(tables.Table):
-		str_simple_date = tables.LinkColumn('display_item', args=[app_name, 'SalesPeriod', A('pk')],
-									verbose_name='Period')
+	class DjangoTable(SkeletalDisplay.Table):
+		str_simple_date = SkeletalDisplay.SelfLinkColumn(verbose_name='Period')
 		xl_id = tables.Column(verbose_name='Excel ID')
 		length_days = tables.Column(verbose_name='Length in Days')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
@@ -232,16 +231,14 @@ class CustomerSalesPeriod(SkeletalDisplay.ModelDisplay):
 	display = False
 	attached_tables = [{'name':'SKUSales', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
 	
-	class DjangoTable(tables.Table):
-		str_period = tables.LinkColumn('display_item', args=[app_name, 'CustomerSalesPeriod', A('pk')],
-									verbose_name='Sales Period')
+	class DjangoTable(SkeletalDisplay.Table):
+		str_period = SkeletalDisplay.SelfLinkColumn(verbose_name='Sales Period')
 		store_count = tables.Column(verbose_name='Store Count')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 	
-	class Table2(tables.Table):
-		customer = tables.LinkColumn('display_item', args=[app_name, 'CustomerSalesPeriod', A('pk')],
-									verbose_name='Customer')
+	class Table2(SkeletalDisplay.Table):
+		customer = SkeletalDisplay.SelfLinkColumn(verbose_name='Customer')
 		store_count = tables.Column(verbose_name='Store Count')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
@@ -250,16 +247,16 @@ class SKUSales(SkeletalDisplay.ModelDisplay):
 	model = m.SKUSales
 	display = False
 	
-	class DjangoTable(tables.Table):
-		sku_name = tables.LinkColumn('display_item', args=[app_name, 'SKUSales', A('pk')])
+	class DjangoTable(SkeletalDisplay.Table):
+		sku_name = SkeletalDisplay.SelfLinkColumn()
 		sales = tables.Column(verbose_name='Number of Sales')
 		cost = tables.Column(verbose_name='Cost of Sales')
 		income = tables.Column(verbose_name='Income from Sales')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 	
-	class Table2(tables.Table):
-		str_period = tables.LinkColumn('display_item', args=[app_name, 'SKUSales', A('pk')], verbose_name='Period')
+	class Table2(SkeletalDisplay.Table):
+		str_period = SkeletalDisplay.SelfLinkColumn(verbose_name='Period')
 		sales = tables.Column(verbose_name='Number of Sales')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass

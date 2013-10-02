@@ -1,0 +1,41 @@
+{% extends "sk_base.html" %}
+
+{% block extra_css %}
+	{% load staticfiles %}
+	<link rel="stylesheet" href="{% static "styles.css" %}?">
+{% endblock %}
+
+{% block body %}   
+<div class="navbar navbar-inverse navbar-fixed-top hidden-print">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+        {% for item in top_menu %}<span class="icon-bar"></span>{% endfor %}
+      </button>
+      <a class="navbar-brand" href="{% url "index" %}">{{site_title}}</a>
+    </div>
+    <div class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        {% for item in top_menu %}
+		<li class="{{item.class}}"><a href="{{item.url}}">{{item.name}}</a></li>
+		{% endfor %}
+      </ul>
+    </div><!--/.navbar-collapse -->
+  </div>
+</div>
+<div class="container main-container">
+<ul class="my-tabs nav nav-tabs">
+	<li style="width:20px; height: 30px;"></li>
+	
+    {% for item in tabs %}
+		<li class="{{ item.class }}"><a href="{{ item.url }}">{{ item.name }} 
+			{% if item.glyph %}&nbsp;<span class="glyphicon glyphicon-{{ item.glyph }}"></span> {% endif %}
+			</a>
+		</li>
+	{% endfor %}
+</ul>
+	{% load SkeletalDisplayTags %}
+	{% sk_headings %}
+	{% block content %}{% endblock %}
+</div>
+{% endblock body %}
