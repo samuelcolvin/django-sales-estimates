@@ -14,21 +14,6 @@ import time
 
 from django.shortcuts import render
 
-def generate(request):
-    logger = SkeletalDisplay.Logger()
-    content = {}
-    try:
-        generate_auto_sales_figures(logger.addline)
-    except Exception, e:
-        content['errors'] = ['ERROR: %s' % str(e)]
-    else:
-        content['success'] = ['Sales Estimates Successfully Updated']
-    finally:
-        content['info'] = logger.get_log()
-    
-    content.update(viewb.basic_context(request, 'generate'))
-    return render(request, 'generate.html', content)
-
 def generate_sales_periods(log):
     start_date = dtdt.strptime(settings.SALES_PERIOD_START_DATE, settings.CUSTOM_DATE_FORMAT)
     system_finish_date = dtdt.strptime(settings.SALES_PERIOD_FINISH_DATE, settings.CUSTOM_DATE_FORMAT)
@@ -63,22 +48,33 @@ def generate_sales_periods(log):
             sp_to_add.append(sp)
     m.SalesPeriod.objects.bulk_create(sp_to_add)
     log('created %d sales periods' % m.SalesPeriod.objects.count())
-        
-# def populate_sales_periods(log):
-#     log('Creating customer sales periods and SKU sales periods...')
-#     for period in m.SalesPeriod.objects.all():
-#         for customer in m.Customer.objects.all():
-#             csp = m.CustomerSalesPeriod.objects.filter(customer=customer, period=period)
-#             if csp.count() > 0:
-#                 csp = csp[0]
-#             else:
-#                 csp = m.CustomerSalesPeriod.objects.create(customer=customer, period=period)
-#             for csku in customer.c_skus.all():
-#                 existing = m.SKUSales.objects.filter(period=csp, csku=csku)
-#                 if existing.count() == 0:
-#                     m.SKUSales.objects.create(period=csp, csku=csku)
-#     log('Created %d customer sales periods and %s sku sales periods' % 
-#         (m.CustomerSalesPeriod.objects.count(), m.SKUSales.objects.count()))
+    
+def generate_customer_sp(log):
+    t = time.time()
+    existing = m.CustomerSalesPeriod.objects.all()
+    log('deleting %d existing Customer Sales Periods' % existing.count())
+    existing.delete()
+    added = 0
+    for customer in m.Customer.objects.all().iterator():
+        for sp in m.SalesPeriod.objects.all().iterator():
+            m.CustomerSalesPeriod.objects.create(customer = customer, period = sp)
+            added +=1
+    diff_mid = time.time() - t
+    log('generated %d Customer Sales Periods in %0.3f secs' % (added, diff_mid))
+    
+def generate_cskui(log):
+    log('%d exists CustomerSKUInfo groups' % m.CustomerSKUInfo.objects.count())
+    t = time.time()
+    log('Generating Customer SKU Information...')
+    added = 0
+    for customer in m.Customer.objects.all().iterator():
+        for sku in customer.skus.all().iterator():
+            already = m.CustomerSKUInfo.objects.filter(sku=sku, customer=customer)
+            if not already.exists():
+                m.CustomerSKUInfo.objects.create(sku=sku, customer=customer)
+                added += 1
+    diff_mid = time.time() - t
+    log('generated %d CustomerSKUInfo groups in %0.3f secs' % (added, diff_mid))
 
 def generate_auto_sales_figures(log):
     t = time.time()
@@ -88,7 +84,7 @@ def generate_auto_sales_figures(log):
     decimal.getcontext().prec = 4
     sku_sales_toadd = []
     for csp in m.CustomerSalesPeriod.objects.all().iterator():
-        for csku in m.CustomerSKU.objects.filter(customer=csp.customer).iterator():
+        for csku in m.CustomerSKUInfo.objects.filter(customer=csp.customer).iterator():
             if csp.store_count != None and csku.sale_rate_factor != None:
                 sku_sales = m.SKUSales(period=csp, csku=csku)
                 sku_count += 1

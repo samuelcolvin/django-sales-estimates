@@ -185,6 +185,7 @@ class SKU(BasicModel):
 class Customer(BasicModel):
     skus = models.ManyToManyField(SKU, related_name='customers')
     dft_srf = models.FloatField('Default Sale Rate Factor', default = 1)
+    dft_store_count = models.IntegerField(null = True, blank = True)
     
     def sku_count(self):
         return self.skus.count()
@@ -215,6 +216,7 @@ class CustomerSKUInfo(models.Model):
         return '%s for %s' % (self.sku.name, self.customer.name)
         
     class Meta:
+        unique_together = (('sku', 'customer'),)
         verbose_name_plural = 'Customer SKU Information'
         verbose_name = 'Customer SKU Information'
     
@@ -275,6 +277,12 @@ class CustomerSalesPeriod(models.Model):
             s_count = '%d stores' % self.store_count
         return 'period from %s for %s, %s' % (self.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT),
                                                       self.customer.name, s_count)
+        
+    def save(self, *args, **kwargs):
+        super(CustomerSalesPeriod, self).save(*args, **kwargs)
+        if self.store_count is None and self.customer.dft_store_count is not None:
+            self.store_count = self.customer.dft_store_count
+            self.save()
 
 class SKUSales(models.Model):
     period = models.ForeignKey(CustomerSalesPeriod, related_name='sku_sales')

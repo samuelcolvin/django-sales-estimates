@@ -188,10 +188,10 @@ DISPLAY_APPS = ['SalesEstimates', 'SkeletalDisplay']
 HOT_PERMITTED_GROUPS = 'all'
 LOGIN_REQUIRED = True
 LOGIN_REDIRECT_URL = '/'
+PAGE_BASE = 'page_base.html'
 
 SITE_TITLE = 'TEST'
-TOP_MENU = [{'url': 'display_index', 'name': 'Models'},
-			{'url': 'generate', 'name': 'Regenerate'}, 
+TOP_MENU = [{'url': 'process', 'name': 'Process'},
 			{'url': 'upload', 'name': 'Import'}, 
 			{'url': 'download', 'name': 'Export'}]
 LOGIN_REDIRECT_URL = '/'
