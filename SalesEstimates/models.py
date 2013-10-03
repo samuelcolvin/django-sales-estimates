@@ -5,7 +5,7 @@ class BasicModel(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
     comment = models.TextField(null=True, blank=True)
-    xl_id = models.IntegerField('Excel ID', default=-1)
+    xl_id = models.IntegerField('Excel ID', default=-1, editable=False)
     
     def __unicode__(self):
         return self.name
@@ -183,12 +183,14 @@ class SKU(BasicModel):
         verbose_name = 'SKU'
 
 class Customer(BasicModel):
-    skus = models.ManyToManyField(SKU, related_name='customers')
     dft_srf = models.FloatField('Default Sale Rate Factor', default = 1)
     dft_store_count = models.IntegerField(null = True, blank = True)
     
+    def all_skus(self):
+        return CustomerSKUInfo.objects.filter(customer=self)
+    
     def sku_count(self):
-        return self.skus.count()
+        return self.all_skus().count()
         
     class Meta:
         verbose_name_plural = 'Customers'
@@ -197,11 +199,14 @@ class Customer(BasicModel):
 class CustomerSKUInfo(models.Model):
     sku = models.ForeignKey(SKU, related_name='c_skus')
     customer = models.ForeignKey(Customer, related_name='c_skus')
-    price = models.DecimalField('Sales Price', max_digits=11, decimal_places=2, null=True)
-    srf = models.FloatField('Sale Rate Factor', null = True)
-    custom_srf = models.BooleanField('Has Custom Sale Rate Factor', default= True)
-    season_var = models.ForeignKey(SeasonalVariation, related_name='customer_skus', null = True)
-    xl_id = models.IntegerField('Excel ID', default=-1)
+    price = models.DecimalField('Sales Price', max_digits=11, decimal_places=2, null=True, blank=True)
+    price.help_text = 'Leave blank to use the SKU default price'
+    srf = models.FloatField('Sale Rate Factor', null = True, blank=True)
+    srf.help_text = 'Leave blank to use the product of the Customer and SKU default (srf=customer srf default * sku srf default)'
+    custom_srf = models.BooleanField('Has Custom Sale Rate Factor', default= True, editable=False)
+    season_var = models.ForeignKey(SeasonalVariation, related_name='customer_skus', null = True, blank=True)
+    season_var.help_text = 'Leave blank to use the SKU default seasonal variation'
+    xl_id = models.IntegerField('Excel ID', default=-1, editable=False)
     
     def sku_name(self):
         return self.sku.name
@@ -291,11 +296,6 @@ class SKUSales(models.Model):
     xl_id = models.IntegerField('Excel ID', default=-1)
     income = models.DecimalField('Income from sales', max_digits=11, decimal_places=4, default = 0)
     cost = models.DecimalField('cost of SKUs sold', max_digits=11, decimal_places=4, default = 0)
-    
-#     imex_fields = ['xl_id', 'period.period', 'csku', 'sales']
-#     imex_order = 7
-#     import_extra_func = 'import_SalesPeriod'
-#     export_cls = 'SKUSalesExtra'
     
     def sku_name(self):
         return self.csku.sku_name()

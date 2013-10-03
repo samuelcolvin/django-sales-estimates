@@ -31,7 +31,7 @@ class WorkerFuncs(object):
         content = ImportExport.perform_import(fname, response.lower() == 'y')
         pprint.pprint(content)
         if 'success' in content:
-            worker.generate_auto_sales_figures(WorkerFuncs._print)
+            worker.generate_skusales(WorkerFuncs._print)
         
     @staticmethod
     def export_to_xl(interactive):
@@ -39,7 +39,7 @@ class WorkerFuncs(object):
         
     @staticmethod
     def generate_sales_estimates(interactive):
-        worker.generate_auto_sales_figures(WorkerFuncs._print)
+        worker.generate_skusales(WorkerFuncs._print)
         
     @staticmethod
     def _print(line):

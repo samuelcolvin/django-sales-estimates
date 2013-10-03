@@ -143,6 +143,7 @@ INSTALLED_APPS = (
     'SkeletalDisplay',
     'SalesEstimates',
     'ExcelImportExport',
+    'django_extensions',
     'south'
 )
 
@@ -189,11 +190,12 @@ HOT_PERMITTED_GROUPS = 'all'
 LOGIN_REQUIRED = True
 LOGIN_REDIRECT_URL = '/'
 PAGE_BASE = 'page_base.html'
+SK_VIEW_SETTINGS ={'viewname': 'process', 'args2include': [False, True], 'base_name': 'Process'}
 
 SITE_TITLE = 'TEST'
 TOP_MENU = [{'url': 'process', 'name': 'Process'},
 			{'url': 'upload', 'name': 'Import'}, 
-			{'url': 'download', 'name': 'Export'}]
+			{'url': 'export', 'name': 'Export'}]
 LOGIN_REDIRECT_URL = '/'
 INTERNAL_IPS = ('127.0.0.1',)
 

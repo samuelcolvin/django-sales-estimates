@@ -1,5 +1,16 @@
 {% extends base_template %}
 
-{% block maincol_content %}
-	<h4>{{title}}</h4>
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+	{% for item in options %}
+	    <div class="input-group option-group">
+		  <span class="form-control name">{{item.name}}</span>	
+	      <span class="input-group-btn">
+			<a href="{{item.url}}" class="btn btn-default">Go</a>
+	      </span>
+	    </div>
+	{% endfor %}
+  </div>
+</div>
 {% endblock %}

@@ -170,7 +170,7 @@ class SKU(SkeletalDisplay.ModelDisplay):
 class Customer(SkeletalDisplay.ModelDisplay):
 	model = m.Customer
 	extra_funcs= [('SKUs', 'sku_count')]
-	attached_tables = [{'name':'CustomerSKUInfo', 'table': 'Table2', 'populate':'c_skus', 'title':'SKUs Sold'},
+	attached_tables = [{'name':'CustomerSKUInfo', 'table': 'Table2', 'populate_func': 'all_skus', 'title':'SKUs'},
 					{'name':'CustomerSalesPeriod', 'populate':'c_sales_periods', 'title':'Sales Periods'}]
 	index = 4
 	
@@ -181,9 +181,8 @@ class Customer(SkeletalDisplay.ModelDisplay):
 			exclude = ('id', 'description')
 		
 	class HotTable(HotDjango.ModelSerialiser):
-		skus = HotDjango.IDNameSerialiser(m.SKU, many=True)
 		class Meta:
-			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count', 'skus')
+			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count')
 
 class CustomerSKUInfo(SkeletalDisplay.ModelDisplay):
 	model = m.CustomerSKUInfo
@@ -218,6 +217,9 @@ class SalesPeriod(SkeletalDisplay.ModelDisplay):
 	extra_funcs= [('Period', 'str_simple_date')]
 	attached_tables = [{'name':'CustomerSalesPeriod', 'table': 'Table2', 'populate':'c_sales_periods', 'title':'Customers'}]
 	index = 6
+	addable = False
+	editable = False
+	deletable = False
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		str_simple_date = SkeletalDisplay.SelfLinkColumn(verbose_name='Period')
