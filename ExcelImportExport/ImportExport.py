@@ -36,7 +36,7 @@ def perform_import(fname, delete_first):
             SalesEstimates.worker.delete_before_upload(logger.addline)
         ReadXl(fname, logger.addline)
     except Exception, e:
-        context['errors'] = 'ERROR: %s' % str(e)
+        context['errors'] = ['ERROR: %s' % str(e)]
     else:
         context['success'] = ['Document Successfully Uploaded']
     finally:
