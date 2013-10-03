@@ -5,7 +5,7 @@ SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 ON_SERVER = 'linux' in sys.platform.lower()
 if ON_SERVER:
-	DEBUG = True
+	DEBUG = False
 else:
 	DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -18,9 +18,9 @@ if ON_SERVER:
 	DATABASES = {
 	    'default': {
 	        'ENGINE': 'django.db.backends.mysql',
-	        'NAME': 'db_name',
-	        'USER': 'username',
-	        'PASSWORD': 'password',
+	        'NAME': 'scolvin_childsfarm',
+	        'USER': 'scolvin',
+	        'PASSWORD': 'Cg7GIzAq',
 	        'HOST': '',
 	        'PORT': '',
 	    }
@@ -52,7 +52,7 @@ else:
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['.sites.djangoeurope.com']
 
 TIME_ZONE = 'Europe/London'
 
@@ -192,7 +192,7 @@ LOGIN_REDIRECT_URL = '/'
 PAGE_BASE = 'page_base.html'
 SK_VIEW_SETTINGS ={'viewname': 'process', 'args2include': [False, True], 'base_name': 'Process'}
 
-SITE_TITLE = 'TEST'
+SITE_TITLE = 'childsfarm'
 TOP_MENU = [{'url': 'process', 'name': 'Process'},
 			{'url': 'import', 'name': 'Import'}, 
 			{'url': 'export', 'name': 'Export'}]
