@@ -19,7 +19,7 @@ urlpatterns = patterns('',
     url(r'^results/(?P<model>\w+)$', views.ResultsDisplayModel.as_view(), name='results'),
     url(r'^results/(?P<model>\w+)/(?P<id>\d+)$', views.ResultsDisplayItem.as_view(), name='results'),
     
-    url(r'^upload$', 'ExcelImportExport.forms.download', name='upload'),
+    url(r'^import$', 'ExcelImportExport.forms.upload', name='import'),
     url(r'^export$', imex_forms.Export.as_view(), name='export'),
     url(r'^export/(?P<command>\w+)$', imex_forms.Export.as_view(), name='export'),
     url(r'^admin/', include(admin.site.urls)),

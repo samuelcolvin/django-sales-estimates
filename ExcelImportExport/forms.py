@@ -74,12 +74,6 @@ class Export(viewb.TemplateBase):
         finally:
             self._context['info'] = logger.get_log()
 
-def download(request):
-    context = imex.perform_export()
-    context['title'] = 'Download Files'
-    context.update(viewb.basic_context(request, 'download'))
-    return render(request, 'download.html', context)
-
 class ExcelUploadForm(forms.Form):
     xlfile = forms.FileField(
         label='Select Excel (xlsx) File to Upload',
