@@ -10,6 +10,8 @@ import SkeletalDisplay.views_base as viewb
 from django.shortcuts import render
 from django.core.urlresolvers import reverse
 import traceback
+import settings
+from django.shortcuts import redirect
 
 # def perform_export():
 #     logger = SkeletalDisplay.Logger()
@@ -96,6 +98,8 @@ def display(request):
     return (form, fname)
 
 def upload(request):
+    if settings.LOGIN_REQUIRED and not request.user.is_authenticated():
+            return redirect(reverse('login'))
     content = {}
     (upload_form, fname) = display(request)
     content['upload_form'] = upload_form
