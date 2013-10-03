@@ -4,15 +4,10 @@ from datetime import timedelta as td
 
 import SalesEstimates.models as m
 from django.db import models as db_models
-import inspect, operator
-
-import SkeletalDisplay
-import SkeletalDisplay.views_base as viewb
+import inspect
 import decimal
 from django.db import transaction
 import time
-
-from django.shortcuts import render
 
 def generate_sales_periods(log):
     start_date = dtdt.strptime(settings.SALES_PERIOD_START_DATE, settings.CUSTOM_DATE_FORMAT)
@@ -61,22 +56,8 @@ def generate_customer_sp(log):
             added +=1
     diff_mid = time.time() - t
     log('generated %d Customer Sales Periods in %0.3f secs' % (added, diff_mid))
-    
-def generate_cskui(log):
-    log('%d exists CustomerSKUInfo groups' % m.CustomerSKUInfo.objects.count())
-    t = time.time()
-    log('Generating Customer SKU Information...')
-    added = 0
-    for customer in m.Customer.objects.all().iterator():
-        for sku in customer.skus.all().iterator():
-            already = m.CustomerSKUInfo.objects.filter(sku=sku, customer=customer)
-            if not already.exists():
-                m.CustomerSKUInfo.objects.create(sku=sku, customer=customer)
-                added += 1
-    diff_mid = time.time() - t
-    log('generated %d CustomerSKUInfo groups in %0.3f secs' % (added, diff_mid))
 
-def generate_auto_sales_figures(log):
+def generate_skusales(log):
     t = time.time()
     m.SKUSales.objects.all().delete()
     log('deleted all existing SKU sales estimates')
@@ -84,14 +65,20 @@ def generate_auto_sales_figures(log):
     decimal.getcontext().prec = 4
     sku_sales_toadd = []
     for csp in m.CustomerSalesPeriod.objects.all().iterator():
-        for csku in m.CustomerSKUInfo.objects.filter(customer=csp.customer).iterator():
-            if csp.store_count != None and csku.sale_rate_factor != None:
-                sku_sales = m.SKUSales(period=csp, csku=csku)
-                sku_count += 1
-                sku_sales.sales = csp.store_count * csku.sale_rate_factor * settings.SALES_PERIOD_LENGTH * 4
-                sku_sales.income = decimal.Decimal(sku_sales.sales) * sku_sales.csku.price
+        for cskui in m.CustomerSKUInfo.objects.filter(customer=csp.customer).iterator():
+            if csp.store_count != None and cskui.srf != None:
+                period_months = range(csp.period.start_date.month, csp.period.finish_date.month + 1)
+                month_vars = cskui.season_var.months.filter(month__in=period_months)
+                season_var_srf = 1
+                if month_vars.count() > 0:
+                    season_var_srf = month_vars.aggregate(mean = db_models.Avg('srf'))['mean']
+                sku_sales = m.SKUSales(period=csp, csku=cskui)
+                sku_sales.sales = csp.store_count * cskui.srf * settings.SALES_PERIOD_LENGTH * 4 * season_var_srf
+                sku_sales.income = decimal.Decimal(sku_sales.sales) * cskui.price
                 sku_sales_toadd.append(sku_sales)
-    m.SKUSales.objects.bulk_create(sku_sales_toadd)
+                sku_count += 1
+    if len(sku_sales_toadd) > 0:
+        m.SKUSales.objects.bulk_create(sku_sales_toadd)
     log('%d SKU sale estimates added' % sku_count)
     mid = time.time()
     diff_mid = mid - t
@@ -115,8 +102,11 @@ def generate_auto_sales_figures(log):
     diff_mid = diff - diff_mid
     log('time taken to calculate costs: %0.3f' % diff_mid)
     log('total time taken: %0.3f' % diff)
+            
+def delete_before_upload(log):
+    clear_se(log)
+    generate_sales_periods(log)
         
-
 def clear_se(log):
     for mod_name in dir(m):
         if mod_name == 'User':
@@ -126,34 +116,15 @@ def clear_se(log):
             mod.objects.all().delete()
             log('Deleting all records from %s' % mod.__name__)
             
-def delete_before_upload(log):
-    clear_se(log)
-    generate_sales_periods(log)
-            
 def calc_total_sales(sku_sales_group):
     return sku_sales_group.aggregate(total_sales = db_models.Sum('sales'))['total_sales']
 
-# def calc_sku_sale_income(sku_sales_group):
-#     sales = map(float, sku_sales_group.values_list('sales', flat=True))
-#     prices = map(float, sku_sales_group.values_list('csku__price', flat=True))
-#     return sum(map(operator.mul, sales, prices))
-# 
-# def calc_sku_sale_group_cost(sku_sales_group):
+# def calc_sku_sales_cost(sku_sales):
 #     cost = 0
-#     sp = sku_sales_group[0].period.period
-#     for sku_sales in sku_sales_group:
-#         for comp in m.Component.objects.filter(assemblies__skus__c_skus__sku_sales=sku_sales):
-#             sku_sales_group_period = m.SKUSales.objects.filter(period__period=sp).filter(csku__sku__assemblies__components__order_group=comp.order_group)
-#             orders = calc_total_sales(sku_sales_group_period)
-#             cost += comp.order_group.cost(orders)*orders
+#     sp = sku_sales.period.period
+#     for comp in m.Component.objects.filter(assemblies__skus__c_skus__sku_sales=sku_sales).iterator():
+#         sku_sales_group_period = m.SKUSales.objects.filter(period__period=sp).filter(csku__sku__assemblies__components__order_group=comp.order_group)
+#         orders = calc_total_sales(sku_sales_group_period)
+#         cost += comp.order_group.cost(orders)*orders
 #     return cost
-
-def calc_sku_sales_cost(sku_sales):
-    cost = 0
-    sp = sku_sales.period.period
-    for comp in m.Component.objects.filter(assemblies__skus__c_skus__sku_sales=sku_sales).iterator():
-        sku_sales_group_period = m.SKUSales.objects.filter(period__period=sp).filter(csku__sku__assemblies__components__order_group=comp.order_group)
-        orders = calc_total_sales(sku_sales_group_period)
-        cost += comp.order_group.cost(orders)*orders
-    return cost
     

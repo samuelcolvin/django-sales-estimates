@@ -1,139 +1,185 @@
 from django.shortcuts import redirect
+import django_tables2 as tables
 import SkeletalDisplay.views_base as viewb
 import SkeletalDisplay.views as sk_views
 from django.core.urlresolvers import reverse
 import SkeletalDisplay
 import SalesEstimates.worker as worker
+import traceback
 import SalesEstimates.models as m
+from django.db import models as db_models
+import settings
 
 class TabsMixin:
     def generate_tabs(self, active):
         tabs=[{'url': 'process', 'name': 'Setup', 'glyph': 'arrow-right'}]
-        tabs.append({'url': 'generate_cskui', 'name': 'Generate Customer SKU Info', 'glyph': 'fire'})
-        tabs.append({'url': 'process_alter', 'name': 'Alter Customer SKU Info', 'glyph': 'arrow-right'})
-        tabs.append({'url': 'process', 'name': 'Generate Sales Estimates', 'glyph': 'fire'})
+        tabs.append({'url': 'generate', 'name': 'Generate Sales Estimates', 'glyph': 'flash'})
+        tabs.append({'url': 'results', 'name': 'Results', 'glyph': 'fire'})
         for tab in tabs:
             if tab['url'] == active:
                 tab['class'] = 'active'
             tab['url'] = reverse(tab['url'])
         self._context['tabs'] = tabs
+        self.request.session['extra_context'] = {'tabs': tabs}
 
-class SetupIndex(viewb.TemplateBase, TabsMixin):
-    template_name = 'progress_setup.html'
-    top_active = 'process'
-    viewname = 'process'
-    base_name = 'Process'
-    include_appname_in_args = False
-    side_menu_items = ('Manufacturer', 'OrderGroup', 'Component', 'Assembly', 
-                       'SKUGroup', 'SeasonalVariation', 'SKU', 'Customer')
+class Index(viewb.TemplateBase):
+    template_name = 'index.html'
+    side_menu = False
+    all_auth_permitted = True
+    
+    def setup_context(self, **kw):
+        self.request.session['top_active'] = None
+        super(Index, self).setup_context(**kw)
     
     def get_context_data(self, **kw):
-        self._context['title'] = 'Setup'
-        self.generate_tabs('process')
+        self._context['title'] = settings.SITE_TITLE
+        self._context['base_template'] = 'sk_page_base.html'
         return self._context
 
 class SetupDisplayModel(sk_views.DisplayModel, TabsMixin):
     top_active = 'process'
-    viewname = 'process'
-    base_name = 'Process'
-    include_appname_in_args = False
-    side_menu_items = ('Manufacturer', 'OrderGroup', 'Component', 'Assembly', 
-                       'SKUGroup', 'SeasonalVariation', 'SKU', 'Customer')
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
+        if 'model' not in kw:
+            kw['model'] = 'Manufacturer'
         super(SetupDisplayModel, self).setup_context(**kw)
         self.generate_tabs('process')
         
 class SetupDisplayItem(sk_views.DisplayItem, TabsMixin):
     top_active = 'process'
-    viewname = 'process'
-    include_appname_in_args = False
-    side_menu_items = ('Manufacturer', 'OrderGroup', 'Component', 'Assembly', 
-                       'SKUGroup', 'SeasonalVariation', 'SKU', 'Customer')
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
         super(SetupDisplayItem, self).setup_context(**kw)
         self.generate_tabs('process')
 
-class GenerateCUSKI(viewb.TemplateBase, TabsMixin):
+class Generate(viewb.TemplateBase, TabsMixin):
     template_name = 'generate.html'
     top_active = 'process'
-    base_name = 'Process'
     side_menu = False
+    worker_funcs={'gskusales': {'func': worker.generate_skusales, 'msg': 'Successfully Generated Sales Estimates'},}
     
     def setup_context(self, **kw):
-        super(GenerateCUSKI, self).setup_context(**kw)
-        self.generate_tabs('generate_cskui')
+        super(Generate, self).setup_context(**kw)
+        self.generate_tabs('generate')
     
     def get_context_data(self, **kw):
-        self._context['title'] = 'Generate Customer SKU Info'
-        self._context['page_menu'] = self.set_links()
-        if 'command' in kw:
-            if kw['command'] == 'gcski':
-                self.generate_cski()
-            if kw['command'] == 'gcsp':
-                self.generate_csp()
+        self._context['title'] = 'Generate Sales Estimates'
+        self._context['options'] = self.set_links()
+        self.choose_func(kw)
         return self._context
     
-    def generate_cski(self):
+    def set_links(self):
+        links= []
+        links.append({'url': reverse('generate', kwargs={'command': 'gcsp'}), 'name': 'Generate Customer Sales Periods (required after changes to Customers or Store Counts)'})
+        links.append({'url': reverse('generate', kwargs={'command': 'gskusales'}), 'name': 'Generate Sales Estimates (required after any other changes)'})
+        return links
+        
+    def choose_func(self, kw):
+        if 'command' in kw:
+            command = kw['command']
+            if command in self.worker_funcs:
+                self.do(**self.worker_funcs[command])
+            else:
+                self._context['errors'] = ['%s does not have function for command %s' % (self.__name__, command)]
+            
+    def do(self, func=None, msg=None):
         logger = SkeletalDisplay.Logger()
         try:
-            worker.generate_cskui(logger.addline)
+            func(logger.addline)
         except Exception, e:
-            self._context['errors'] = ['ERROR: %s' % str(e)]
+            error_msg = 'ERROR: %s' % str(e)
+            self._context['errors'] = [error_msg]
+            print error_msg
+            traceback.print_exc()
         else:
-            self._context['success'] = ['Successfully Generate Customer SKU Info']
+            self._context['success'] = [msg]
         finally:
             self._context['info'] = logger.get_log()
             
-    def generate_csp(self):
-        logger = SkeletalDisplay.Logger()
-        try:
-            worker.generate_customer_sp(logger.addline)
-        except Exception, e:
-            self._context['errors'] = ['ERROR: %s' % str(e)]
-        else:
-            self._context['success'] = ['Successfully Generate Customer Sales Periods']
-        finally:
-            self._context['info'] = logger.get_log()
-    
-    def set_links(self):
-        links = [{'url': reverse('generate_cskui', kwargs={'command': 'gcski'}), 'name': 'Generate Customer SKU Information'}]
-        links.append({'url': reverse('delete_all_cskui'), 'name': 'Delete All Customer SKU Information'})
-        links.append({'url': reverse('generate_cskui', kwargs={'command': 'gcsp'}), 'name': 'Generate Customer Sales Periods'})
-        return links
 
-def delete_all_cskui(request):
-    items = m.CustomerSKUInfo.objects.all()
-    msg= 'Deleted %d CustomerSKUInfo groups' % items.count()
-    items.delete()
-    request.session['success']=[msg]
-    return redirect(reverse('generate_cskui'))
-    
-class AlterDisplayModel(sk_views.DisplayModel, TabsMixin):
+class ResultsDisplayModel(sk_views.DisplayModel, TabsMixin):
     top_active = 'process'
-    viewname = 'process_alter'
-    base_name = 'Alter'
-    include_appname_in_args = False
-    side_menu_items = ('CustomerSKUInfo', 'SalesPeriod')
+    side_menu_items = ('SKUGroup', 'SKU', 'Customer')
+    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results'}
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
         if 'model' not in kw:
-            kw['model'] = 'CustomerSKUInfo'
-        super(AlterDisplayModel, self).setup_context(**kw)
-        self.generate_tabs('process_alter')
+            kw['model'] = 'SKUGroup'
+        super(ResultsDisplayModel, self).setup_context(**kw)
+        self.generate_tabs('results')
         
-class AlterDisplayItem(sk_views.DisplayItem, TabsMixin):
+class ResultsDisplayItem(sk_views.DisplayItem, TabsMixin):
     top_active = 'process'
-    viewname = 'process_alter'
-    base_name = 'Alter'
-    include_appname_in_args = False
-    side_menu_items = ('CustomerSKUInfo', 'SalesPeriod')
+    side_menu_items = ('SKUGroup', 'SKU', 'Customer')
+    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results'}
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
-        super(AlterDisplayItem, self).setup_context(**kw)
-        self.generate_tabs('process_alter')
+        super(ResultsDisplayItem, self).setup_context(**kw)
+        self.generate_tabs('results')
+        
+    def get_context_data(self, **kw):
+        self._context = super(ResultsDisplayItem, self).get_context_data(**kw)
+        del self._context['page_menu']
+        results_table = ResultsTable()
+        self._context['tables_below'] = results_table.populate_table(self._item)
+        return self._context
+
+class DefaultMeta:
+    orderable = False
+    attrs = {'class': 'table table-bordered table-condensed'}
+    per_page = 100
+
+class ResultsTable:
+    class DefaultTable(tables.Table):
+        period = tables.Column()
+        skus_sold = tables.Column(verbose_name='SKUs Sold')
+        cost = SkeletalDisplay.SterlingPriceColumn(verbose_name='Cost')
+        income = SkeletalDisplay.SterlingPriceColumn(verbose_name='Income')
+        Meta = DefaultMeta
+            
+    class CustomerTable(DefaultTable):
+        store_count = tables.Column(verbose_name='Store Count')
+        Meta = DefaultMeta
+        
+    def populate_table(self, item):
+        this_table={'title': 'Sales Periods'}
+        content = []
+        func = getattr(self, item.__class__.__name__)
+        for sp in m.SalesPeriod.objects.all():
+            row = func(sp, item)
+            row['period'] = sp.str_simple_date()
+            content.append(row)
+        t_name = item.__class__.__name__ + 'Table'
+        if hasattr(self, t_name):
+            table = getattr(self, t_name)
+        else:
+            table = self.DefaultTable
+        this_table['renderable'] = table(content)
+        return [this_table]
+        
+    def Customer(self, sp, customer):
+        row={}
+        csp = m.CustomerSalesPeriod.objects.filter(customer = customer).filter(period = sp)[0]
+        row['store_count'] = csp.store_count
+        sku_sales = m.SKUSales.objects.filter(period__period__id = sp.id, csku__customer__id=customer.id)
+        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
+        row.update(info)
+        return row
+
+    def SKU(self, sp, sku):
+        row={}
+        sku_sales = m.SKUSales.objects.filter(period__period__id = sp.id, csku__sku__id=sku.id)
+        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
+        row.update(info)
+        return row
+
+    def SKUGroup(self, sp, group):
+        row={}
+        sku_sales = m.SKUSales.objects.filter(period__period__id = sp.id, csku__sku__group__id=group.id)
+        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
+        row.update(info)
+        return row
