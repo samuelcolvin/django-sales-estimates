@@ -31,13 +31,13 @@
 *DONE add sku groups
 *DONE add seasonal variation instances
 *DONE add sales rate factor to customers
-* changed models to process, add tabs *************************************
+*DONE changed models to process, add tabs *************************************
 * include instructions on index page.
-* process in three(?) steps
-* add promotion instances - containing skus, customers, start/finish dates
+*DONE process in three(?) steps
+*DONE add promotion instances - containing skus, customers, start/finish dates
 * get formsets working properly as in through different class
 * confirm forcasts
-* add output: sku
+*DONE add output: sku
 * add output: sku group
 * orders required
 * add summary of incomplete things

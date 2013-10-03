@@ -1,6 +1,7 @@
 {% extends base_template %}
 
-{% block maincol_content %}
-	<h4>{{title}}</h4>
-	<a href="{{download_url}}">Download Excel Dump</a>
+{% block content %}
+{% if download_url %}
+	<a href="{{download_url}}" class="btn btn-default">Download Excel Dump</a>
+{% endif %}
 {% endblock %}

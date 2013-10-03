@@ -1,6 +1,7 @@
 from django.conf.urls import patterns, include, url
 import settings
 import SalesEstimates.views as views
+import ExcelImportExport.forms as imex_forms
 
 from django.contrib import admin
 admin.autodiscover()
@@ -8,18 +9,19 @@ admin.autodiscover()
 urlpatterns = patterns('',
     url(r'^hot/', include('HotDjango.urls')),
     url(r'^', include('SkeletalDisplay.urls')),
-    url(r'^process$', views.SetupIndex.as_view(), name='process'),
+    url(r'^$', views.Index.as_view(), name='index'),
+    url(r'^process$', views.SetupDisplayModel.as_view(), name='process'),
     url(r'^process/(?P<model>\w+)$', views.SetupDisplayModel.as_view(), name='process'),
     url(r'^process/(?P<model>\w+)/(?P<id>\d+)$', views.SetupDisplayItem.as_view(), name='process'),
-    url(r'^generate1$', views.GenerateCUSKI.as_view(), name='generate_cskui'),
-    url(r'^generate1/(?P<command>\w+)$', views.GenerateCUSKI.as_view(), name='generate_cskui'),
-    url(r'^delete_all_cskui$', 'SalesEstimates.views.delete_all_cskui', name='delete_all_cskui'),
-    url(r'^process_alter$', views.AlterDisplayModel.as_view(), name='process_alter'),
-    url(r'^process_alter/(?P<model>\w+)$', views.AlterDisplayModel.as_view(), name='process_alter'),
-    url(r'^process_alter/(?P<model>\w+)/(?P<id>\d+)$', views.AlterDisplayItem.as_view(), name='process_alter'),
+    url(r'^generate$', views.Generate.as_view(), name='generate'),
+    url(r'^generate/(?P<command>\w+)$', views.Generate.as_view(), name='generate'),
+    url(r'^results$', views.ResultsDisplayModel.as_view(), name='results'),
+    url(r'^results/(?P<model>\w+)$', views.ResultsDisplayModel.as_view(), name='results'),
+    url(r'^results/(?P<model>\w+)/(?P<id>\d+)$', views.ResultsDisplayItem.as_view(), name='results'),
     
-    url(r'^upload','ExcelImportExport.forms.upload', name='upload'),
-    url(r'^download','ExcelImportExport.forms.download', name='download'),
+    url(r'^upload$', 'ExcelImportExport.forms.download', name='upload'),
+    url(r'^export$', imex_forms.Export.as_view(), name='export'),
+    url(r'^export/(?P<command>\w+)$', imex_forms.Export.as_view(), name='export'),
     url(r'^admin/', include(admin.site.urls)),
 )
 

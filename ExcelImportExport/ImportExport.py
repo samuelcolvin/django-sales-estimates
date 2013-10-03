@@ -9,42 +9,39 @@ import ExcelImportExport.models
 import settings, os
 import SkeletalDisplay
 
-def perform_export():
-    logger = SkeletalDisplay.Logger()
+def perform_export(add_line):
     tmp_fname = 'tmp.xlsx'
     if settings.ON_SERVER:
         tmp_fname = os.path.join(settings.SITE_ROOT,  tmp_fname)
-    content = {}
+    context = {}
     try:
-        WriteXl(tmp_fname, logger.addline)
+        WriteXl(tmp_fname, add_line)
     except Exception, e:
-        content['error'] = 'ERROR: %s' % str(e)
+        traceback.print_exc()
+        raise Exception('ERROR: %s' % str(e))
     else:
         f_tmp = open(tmp_fname, 'r')
         file_mdl = ExcelImportExport.models.ExcelFiles()
         file_mdl.xlfile.save(tmp_fname, File(f_tmp))
         file_mdl.source = 'DL'
         file_mdl.save()
-        content['download_url'] = file_mdl.xlfile.url
-        content['success'] = 'Document Successfully Uploaded'
-    finally:
-        content['info'] = logger.get_log()
-    return content
+        context['download_url'] = file_mdl.xlfile.url
+    return context
 
 def perform_import(fname, delete_first):
-    content={}
+    context={}
     logger = SkeletalDisplay.Logger()
     try:
         if delete_first:
             SalesEstimates.worker.delete_before_upload(logger.addline)
         ReadXl(fname, logger.addline)
     except Exception, e:
-        content['error'] = 'ERROR: %s' % str(e)
+        context['errors'] = 'ERROR: %s' % str(e)
     else:
-        content['success'] = 'Document Successfully Uploaded'
+        context['success'] = ['Document Successfully Uploaded']
     finally:
-        content['info'] = logger.get_log()
-    return content
+        context['info'] = logger.get_log()
+    return context
 
 class _ImportExport:
     def get_models(self):
@@ -72,9 +69,11 @@ class ReadXl(_ImportExport):
                 if sheet_model.import_sheet:
                     self._import_sheet(sheet_model)
         except Exception:
-            self._log('Error on sheet %s, row %d' % (self._sheet_name, self._row + 1))
             tb = traceback.format_exc().strip('\r\n')
             self._log('TRACEBACK:\n%s' % tb)
+            msg = 'Error on sheet %s, row %d' % (self._sheet_name, self._row + 1)
+            self._log(msg)
+            raise Exception(msg)
         else:
             self.success = True
      
@@ -165,17 +164,19 @@ class WriteXl(_ImportExport):
                 self._write_model(export_model)
 #             self._write_model(m.SalesPeriod, 'Sales Figures', self.OutputSheet, [])
         except Exception:
-            self._log('Error on sheet %s, row %d' % (self._sheet, self._row))
             tb = traceback.format_exc().strip('\r\n')
             self._log('TRACEBACK:\n%s' % tb)
+            msg = 'Error on sheet %s, row %d' % (self._sheet, self._row)
+            self._log(msg)
+            raise Exception(msg)
         else:
             try:
                 self._wb.save(filename = fname)
             except IOError:
-                log('ERROR: writing to "%s" failed, file may be open' % fname)
+                raise Exception('ERROR: writing to "%s" failed, file may be open' % fname)
             else:
                 self._log('writing output file')
-                self.success = False
+                self.success = True
         
     def _write_model(self, sheet_model):
         ws = self._wb.create_sheet()
