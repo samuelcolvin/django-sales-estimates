@@ -116,6 +116,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'SkeletalDisplay.middleware.LoginRequiredMiddleware',
 )
 
 ROOT_URLCONF = 'urls'
@@ -187,7 +188,7 @@ SHORT_DATETIME_FORMAT = DATETIME_FORMAT
 #Skeletal Dispaly Settings
 DISPLAY_APPS = ['SalesEstimates', 'SkeletalDisplay']
 HOT_PERMITTED_GROUPS = 'all'
-LOGIN_REQUIRED = True
+LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 PAGE_BASE = 'page_base.html'
 SK_VIEW_SETTINGS ={'viewname': 'process', 'args2include': [False, True], 'base_name': 'Process'}
