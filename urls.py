@@ -8,8 +8,8 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     url(r'^hot/', include('HotDjango.urls')),
-    url(r'^', include('SkeletalDisplay.urls')),
     url(r'^$', views.Index.as_view(), name='index'),
+    url(r'^', include('SkeletalDisplay.urls')),
     url(r'^process$', views.SetupDisplayModel.as_view(), name='process'),
     url(r'^process/(?P<model>\w+)$', views.SetupDisplayModel.as_view(), name='process'),
     url(r'^process/(?P<model>\w+)/(?P<id>\d+)$', views.SetupDisplayItem.as_view(), name='process'),
