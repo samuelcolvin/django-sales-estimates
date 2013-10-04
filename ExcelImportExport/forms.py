@@ -98,8 +98,6 @@ def display(request):
     return (form, fname)
 
 def upload(request):
-    if settings.LOGIN_REQUIRED and not request.user.is_authenticated():
-            return redirect(reverse('login'))
     content = {}
     (upload_form, fname) = display(request)
     content['upload_form'] = upload_form
