@@ -1,6 +1,12 @@
+*~
 *.log
 *.pot
 *.pyc
+*.so
+*.o
+*project
 *.db
 *.xlsx
 /media/
+/migrations/
+env/
