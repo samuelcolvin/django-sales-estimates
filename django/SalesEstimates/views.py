@@ -58,7 +58,8 @@ class Generate(viewb.TemplateBase, TabsMixin):
     template_name = 'generate.html'
     top_active = 'process'
     side_menu = False
-    worker_funcs={'gskusales': {'func': worker.generate_skusales, 'msg': 'Successfully Generated Sales Estimates'},}
+    worker_funcs={'gcsp': {'func': worker.generate_customer_sp, 'msg': 'Successfully Generated Customer Sales Periods '},
+                  'gskusales': {'func': worker.generate_skusales, 'msg': 'Successfully Generated Sales Estimates'}}
     
     def setup_context(self, **kw):
         super(Generate, self).setup_context(**kw)
@@ -82,7 +83,8 @@ class Generate(viewb.TemplateBase, TabsMixin):
             if command in self.worker_funcs:
                 self.do(**self.worker_funcs[command])
             else:
-                self._context['errors'] = ['%s does not have function for command %s' % (self.__name__, command)]
+                name = self.__class__.__name__
+                self._context['errors'] = ['%s does not have function for command %s' % (name, command)]
             
     def do(self, func=None, msg=None):
         logger = SkeletalDisplay.Logger()
