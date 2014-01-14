@@ -1,0 +1,14 @@
+django
+django-tables2
+django-filter
+django-bootstrap-form
+django-extensions
+django-password-reset
+south
+pytz
+python-dateutil
+MySQL-python
+djangorestframework
+markdown
+markdown2
+openpyxl

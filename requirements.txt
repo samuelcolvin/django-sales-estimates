@@ -1,2 +1,0 @@
-django-bootstrap-form
-djangorestframework

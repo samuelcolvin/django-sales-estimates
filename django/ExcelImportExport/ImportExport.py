@@ -58,7 +58,8 @@ class ReadXl(_ImportExport):
         self._log = log
         self._log('loading "%s"' % fname)
         self._wb = openpyxl.load_workbook(fname)
-#         self._log('Worksheets: %s' % str(self._wb.get_sheet_names()))
+        self._sheet_names = self._wb.get_sheet_names()
+        self._log('Worksheets: %r' % self._sheet_names)
         self._unichar_finder = re.compile(r'[^\x00-\xff]')
         self._sheet = 'unknown'
         self._row = 0
@@ -67,18 +68,27 @@ class ReadXl(_ImportExport):
         try:
             for sheet_model in sheet_models:
                 if sheet_model.import_sheet:
-                    self._import_sheet(sheet_model)
+                    self._import_sheet(sheet_model, sheet_model.__name__)
         except Exception:
             tb = traceback.format_exc().strip('\r\n')
-            self._log('TRACEBACK:\n%s' % tb)
+            self._log('TRACEBACK:')
+            for line in tb.split('\n'):
+                self._log(line)
             msg = 'Error on sheet %s, row %d' % (self._sheet_name, self._row + 1)
             self._log(msg)
             raise Exception(msg)
         else:
             self.success = True
      
-    def _import_sheet(self, sheet_model):
-        self._sheet_name = sheet_model.__name__
+    def _import_sheet(self, sheet_model, sname, try_again = True):
+        if sname not in self._sheet_names:
+            self._log('"%s" is not a valid sheet name' % sname)
+            if try_again:
+                sname2 = '%s1' % sname
+                self._log('trying "%s"' % sname2)
+                self._import_sheet(sheet_model, sname2, False)
+            return
+        self._sheet_name = sname
         fields = sheet_model.imex_fields
         ws = self._wb.get_sheet_by_name(name = self._sheet_name)
         self._row = sheet_model.imex_top_offset

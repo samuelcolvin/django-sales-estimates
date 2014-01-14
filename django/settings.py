@@ -3,7 +3,7 @@ import sys
 
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
-ON_SERVER = 'linux' in sys.platform.lower()
+ON_SERVER = False #'linux' in sys.platform.lower()
 if ON_SERVER:
 	DEBUG = False
 else:
@@ -31,11 +31,11 @@ else:
 		DATABASES = {
 		    'default': {
 		        'ENGINE': 'django.db.backends.mysql',
-		        'NAME': 'sales_estimates',
-		        'USER': 'sc_free',
+		        'NAME': 'salesestimates',
+		        'USER': 'sales-user',
 		        'PASSWORD': '',
 		        'HOST': '127.0.0.1',
-		        'PORT': '3603',
+		        'PORT': '3306',
 		    }
 		}
 	else:

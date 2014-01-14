@@ -1,0 +1,3 @@
+create database salesestimates;
+create user 'sales-user'@'localhost' identified by 'Cg7GIzAq';
+grant all privileges on salesestimates.* to sales-user@localhost;
