@@ -1,10 +1,6 @@
-env
-*~
 *.log
 *.pot
 *.pyc
-*project
 *.db
 *.xlsx
 /media/
-/migrations/
