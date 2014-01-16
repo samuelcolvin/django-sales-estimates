@@ -272,6 +272,7 @@ class CustomerSalesPeriod(models.Model):
     customer = models.ForeignKey(Customer, related_name='c_sales_periods')
     period = models.ForeignKey(SalesPeriod, related_name='c_sales_periods')
     store_count = models.IntegerField(null = True)
+    custom_store_count = models.BooleanField('Has Custom Store Count')
     
     def str_period(self):
         return self.period.str_simple_date()
@@ -284,10 +285,17 @@ class CustomerSalesPeriod(models.Model):
                                                       self.customer.name, s_count)
         
     def save(self, *args, **kwargs):
+        resave = kwargs.pop('resave', False)
         super(CustomerSalesPeriod, self).save(*args, **kwargs)
+        if resave:
+            return
+        if self.store_count is not None:
+            if self.store_count != self.customer.dft_store_count:
+                self.custom_store_count = True
+                self.save(resave = True)
         if self.store_count is None and self.customer.dft_store_count is not None:
             self.store_count = self.customer.dft_store_count
-            self.save()
+            self.save(resave = True)
 
 class SKUSales(models.Model):
     period = models.ForeignKey(CustomerSalesPeriod, related_name='sku_sales')

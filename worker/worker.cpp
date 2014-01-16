@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <iostream>
+#include <sstream>
+#include <algorithm>
+#include <vector>
 
 /*
   Include directly the different
@@ -18,70 +21,144 @@ using namespace std;
 
 class MySQL {
 	sql::Connection *con;
+	vector<int> get_sales_periods();
   public:
-	MySQL(string, string, string, string);
-    int regenerate_csp();
+	string connect(string, string, string, string);
+	string regenerate_sales_periods();
+	string extend_sales_periods();
+	string generate_csp();
+	string clear_csp();
+	string add_customer_csp(int);
+	string update_cust_csp(int);
 };
 
-MySQL::MySQL(string db_name, string user, string password, string connection)
+string MySQL::connect(string db_name, string user, string password, string connection)
 {
+	ostringstream stream;
 	sql::Driver *driver;
 
 	driver = get_driver_instance();
 	con = driver->connect(connection, user, password);
 	con->setSchema(db_name);
-	cout << "Successfully connected to " << connection << " > " << db_name << endl;
+	stream << "Successfully connected to " << connection << " > " << db_name;
+	return stream.str();
 }
 
+string MySQL::clear_csp()
+{
+	ostringstream stream;
+	sql::Statement *stmt;
+	sql::ResultSet *res;
 
-int MySQL::regenerate_csp()
+	stmt = con->createStatement();
+	res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_customersalesperiod;");
+	res->next();
+	stream << "Deleting " << res->getInt(1) << " Customer Sales Period Records";
+	stmt->execute("DELETE FROM SalesEstimates_customersalesperiod;");
+	return stream.str();
+}
+
+vector<int> MySQL::get_sales_periods()
 {
 	sql::Statement *stmt;
 	sql::ResultSet *res;
-	sql::PreparedStatement *pstmt;
-
 	stmt = con->createStatement();
-	string query = "SELECT COUNT(*) FROM SalesEstimates_customersalesperiod;";
-	cout << "executing: " << query << endl;
-	res = stmt->executeQuery(query);
-	res->next();
-	cout << "Records: " << res->getInt(1) << endl;
-	query = "DELETE FROM SalesEstimates_customersalesperiod;";
-	cout << "executing: " << query << endl;
-	query = "SELECT COUNT(*) FROM SalesEstimates_salesperiod;";
-	cout << "executing: " << query << endl;
-	res = stmt->executeQuery(query);
-	res->next();
-	int sales_periods = res->getInt(1);
-	int sales_period_ids[sales_periods];
-	query = "SELECT id FROM SalesEstimates_salesperiod;";
-	cout << "executing: " << query << endl;
-	res = stmt->executeQuery(query);
-	int i = 0;
+	vector<int> sales_periods;
+	res = stmt->executeQuery("SELECT id FROM SalesEstimates_salesperiod;");
 	while (res->next()) {
-	  sales_period_ids[i] = res->getInt("id");
-	  i++;
+		sales_periods.push_back(res->getInt("id"));
 	}
+	return sales_periods;
+}
 
-	query = "SELECT id, name, dft_store_count FROM SalesEstimates_customer;";
-	cout << "executing: " << query << endl;
-	res = stmt->executeQuery(query);
-	pstmt = con->prepareStatement("INSERT INTO SalesEstimates_customersalesperiod(customer_id, period_id, store_count) VALUES (?, ?, ?)");
+string MySQL::generate_csp()
+{
+	ostringstream stream;
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	stmt = con->createStatement();
+	vector<int> sales_periods = get_sales_periods();
+
+	res = stmt->executeQuery("SELECT id, dft_store_count FROM SalesEstimates_customer;");
+	ostringstream query_stream;
+	query_stream << "INSERT INTO SalesEstimates_customersalesperiod(customer_id, period_id, store_count) VALUES";
+	bool first_set = true;
+	int cust_id, store_cnt;
+	int add_count = 0;
 	while (res->next()) {
-		cout << "id: " << res->getInt("id") << ", name: " << res->getString("name") << endl;
-		for (int spi= 0; spi < sales_periods; spi++)
+		for(vector<int>::iterator pid = sales_periods.begin(); pid != sales_periods.end(); ++pid)
 		{
-			pstmt->setInt(1, res->getInt("id"));
-			pstmt->setInt(2, sales_period_ids[spi]);
-			pstmt->setInt(3, res->getInt("dft_store_count"));
-			pstmt->executeUpdate();
+			if (!first_set)
+				query_stream << ",";
+			first_set = false;
+			cust_id = res->getInt("id");
+			store_cnt = res->getInt("dft_store_count");
+			query_stream << "(" << cust_id << "," << *pid << "," << store_cnt << ")";
+			add_count++;
 		}
 	}
+	query_stream << ";";
+	stmt->execute(query_stream.str());
+	stream << "Added " << add_count << " Customer Sales Period Records";
+
+	delete res;
+	delete stmt;
+	return stream.str();
+}
+
+string MySQL::add_customer_csp(int cust_id)
+{
+	ostringstream stream;
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	sql::PreparedStatement *pstmt;
+	stmt = con->createStatement();
+	vector<int> sales_periods = get_sales_periods();
+
+	pstmt = con->prepareStatement("SELECT name, dft_store_count FROM SalesEstimates_customer WHERE id=?;");
+	pstmt->setInt(1, cust_id);
+	res = pstmt->executeQuery();
+	res->next();
+	string name = res->getString("name");
+	int store_count = res->getInt("dft_store_count");
+	stream << "Updating  " << name << " with store count: " << store_count << endl;
+	ostringstream query_stream;
+	query_stream << "INSERT INTO SalesEstimates_customersalesperiod(customer_id, period_id, store_count) VALUES";
+	bool first_set = true;
+	int add_count = 0;
+	while (res->next()) {
+		for(vector<int>::iterator pid = sales_periods.begin(); pid != sales_periods.end(); ++pid)
+		{
+			if (!first_set)
+				query_stream << ",";
+			first_set = false;
+			query_stream << "(" << cust_id << "," << *pid << "," << store_count << ")";
+			add_count++;
+		}
+	}
+	query_stream << ";";
+	stmt->execute(query_stream.str());
+	stream << "Added " << add_count << " Customer Sales Period Records";
+
 	delete pstmt;
 	delete res;
 	delete stmt;
-	return 1;
+	return stream.str();
 }
+
+//	sql::PreparedStatement *pstmt;
+//	pstmt = con->prepareStatement("INSERT INTO SalesEstimates_customersalesperiod(customer_id, period_id, store_count) VALUES (?, ?, ?)");
+//	while (res->next()) {
+//		cout << "id: " << res->getInt("id") << ", name: " << res->getString("name") << endl;
+//		for (int spi= 0; spi < sales_periods; spi++)
+//		{
+//			pstmt->setInt(1, res->getInt("id"));
+//			pstmt->setInt(2, sales_period_ids[spi]);
+//			pstmt->setInt(3, res->getInt("dft_store_count"));
+//			pstmt->execute();
+//		}
+//	}
+//	delete pstmt;
 
 #ifdef PYTHON
 
@@ -92,8 +169,11 @@ using namespace boost::python;
 
 BOOST_PYTHON_MODULE(worker)
 {
-    class_<MySQL>("MySQL", init<string, string, string, string>())
-        .def("regenerate_csp", &MySQL::regenerate_csp)
+    class_<MySQL>("MySQL")
+        .def("connect", &MySQL::connect)
+        .def("generate_csp", &MySQL::generate_csp)
+        .def("clear_csp", &MySQL::clear_csp)
+        .def("add_customer_csp", &MySQL::add_customer_csp)
     ;
 }
 #else
