@@ -84,7 +84,7 @@ class SKUSalesInline(admin.TabularInline):
 
 class CustomerSalesPeriodAdmin(admin.ModelAdmin):
     inlines = [SKUSalesInline]
-    list_display = ('id', 'period', 'customer', 'store_count')
+    list_display = ('id', 'period', 'customer', 'store_count', 'custom_store_count')
     
 admin.site.register(m.CustomerSalesPeriod, CustomerSalesPeriodAdmin)
 
