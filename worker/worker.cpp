@@ -12,68 +12,89 @@
 #include <cppconn/exception.h>
 #include <cppconn/resultset.h>
 #include <cppconn/statement.h>
+#include <cppconn/prepared_statement.h>
 
 using namespace std;
 
-int connect(void)
+class MySQL {
+	sql::Connection *con;
+  public:
+	MySQL(string, string, string, string);
+    int regenerate_csp();
+};
+
+MySQL::MySQL(string db_name, string user, string password, string connection)
 {
-    cout << endl;
-    cout << "Running 'SELECT 'Hello World!' » AS _message'..." << endl;
+	sql::Driver *driver;
 
-	try {
-	  sql::Driver *driver;
-	  sql::Connection *con;
-	  sql::Statement *stmt;
-	  sql::ResultSet *res;
+	driver = get_driver_instance();
+	con = driver->connect(connection, user, password);
+	con->setSchema(db_name);
+	cout << "Successfully connected to " << connection << " > " << db_name << endl;
+}
 
-	  /* Create a connection */
-	  driver = get_driver_instance();
-	  con = driver->connect("tcp://127.0.0.1:3306", "sales-user", "");
-	  /* Connect to the MySQL test database */
-	  con->setSchema("salesestimates");
 
-	  stmt = con->createStatement();
-	  string query = "SELECT COUNT(*) FROM SalesEstimates_customersalesperiod;";
-	  cout << "executing: " << query << endl;
-	  res = stmt->executeQuery(query);
-	  while (res->next()) {
-		cout << "response:        " << res->getInt(1) << endl;
-	  }
-	  query = "TRUNCATE TABLE SalesEstimates_customersalesperiod;";
-	  cout << "executing: " << query << endl;
-	  stmt->executeQuery(query);
-	  delete res;
-	  delete stmt;
-	  delete con;
+int MySQL::regenerate_csp()
+{
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	sql::PreparedStatement *pstmt;
 
-	} catch (sql::SQLException &e) {
-	  cout << "# ERR: SQLException in " << __FILE__;
-	  cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
-	  cout << "# ERR: " << e.what();
-	  cout << " (MySQL error code: " << e.getErrorCode();
-	  cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+	stmt = con->createStatement();
+	string query = "SELECT COUNT(*) FROM SalesEstimates_customersalesperiod;";
+	cout << "executing: " << query << endl;
+	res = stmt->executeQuery(query);
+	res->next();
+	cout << "Records: " << res->getInt(1) << endl;
+	query = "DELETE FROM SalesEstimates_customersalesperiod;";
+	cout << "executing: " << query << endl;
+	query = "SELECT COUNT(*) FROM SalesEstimates_salesperiod;";
+	cout << "executing: " << query << endl;
+	res = stmt->executeQuery(query);
+	res->next();
+	int sales_periods = res->getInt(1);
+	int sales_period_ids[sales_periods];
+	query = "SELECT id FROM SalesEstimates_salesperiod;";
+	cout << "executing: " << query << endl;
+	res = stmt->executeQuery(query);
+	int i = 0;
+	while (res->next()) {
+	  sales_period_ids[i] = res->getInt("id");
+	  i++;
 	}
 
-	cout << endl;
-
-	return EXIT_SUCCESS;
+	query = "SELECT id, name, dft_store_count FROM SalesEstimates_customer;";
+	cout << "executing: " << query << endl;
+	res = stmt->executeQuery(query);
+	pstmt = con->prepareStatement("INSERT INTO SalesEstimates_customersalesperiod(customer_id, period_id, store_count) VALUES (?, ?, ?)");
+	while (res->next()) {
+		cout << "id: " << res->getInt("id") << ", name: " << res->getString("name") << endl;
+		for (int spi= 0; spi < sales_periods; spi++)
+		{
+			pstmt->setInt(1, res->getInt("id"));
+			pstmt->setInt(2, sales_period_ids[spi]);
+			pstmt->setInt(3, res->getInt("dft_store_count"));
+			pstmt->executeUpdate();
+		}
+	}
+	delete pstmt;
+	delete res;
+	delete stmt;
+	return 1;
 }
-
-void say_hello(const char* name) {
-    cout << "Hello " <<  name << "!\n";
-}
-
 
 #ifdef PYTHON
 
 #include <boost/python/module.hpp>
-#include <boost/python/def.hpp>
+//#include <boost/python/def.hpp>
+#include <boost/python.hpp>
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE(worker)
 {
-    def("connect", connect);
-    def("say_hello", say_hello);
+    class_<MySQL>("MySQL", init<string, string, string, string>())
+        .def("regenerate_csp", &MySQL::regenerate_csp)
+    ;
 }
 #else
 
