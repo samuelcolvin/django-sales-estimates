@@ -64,7 +64,7 @@ class CustomerAdmin(admin.ModelAdmin):
 admin.site.register(m.Customer, CustomerAdmin)
 
 class CustomerSKUInfoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'sku', 'customer', 'str_price', 'srf')
+    list_display = ('id', 'sku', 'customer', 'str_price', 'srf', 'season_var')
     
 admin.site.register(m.CustomerSKUInfo, CustomerSKUInfoAdmin)
 

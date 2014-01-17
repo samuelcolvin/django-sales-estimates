@@ -23,6 +23,3 @@ setup (name = 'worker',
 Performs business grunt work in c++ interacting directly with the db.
 ''',
        ext_modules = [worker])
-
-import shutil
-shutil.copy('./build/lib.linux-x86_64-2.7/worker.so', '.')
