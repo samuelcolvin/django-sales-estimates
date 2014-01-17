@@ -21,13 +21,19 @@ using namespace std;
 
 class MySQL {
 	sql::Connection *con;
-	vector<int> get_sales_periods();
+	vector<int> _get_sales_periods();
   public:
 	string connect(string, string, string, string);
+
+	// to generate a whole set of sales periods (may require entire reset), to add extra sales periods
 	string regenerate_sales_periods();
 	string extend_sales_periods();
-	string generate_csp();
+
+	// to clear and generate the customer sales periods
 	string clear_csp();
+	string generate_csp();
+
+	// to add all the csp's for a new customer, and update their store count for an existing one
 	string add_customer_csp(int);
 	string update_cust_csp(int);
 };
@@ -44,6 +50,19 @@ string MySQL::connect(string db_name, string user, string password, string conne
 	return stream.str();
 }
 
+vector<int> MySQL::_get_sales_periods()
+{
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	stmt = con->createStatement();
+	vector<int> sales_periods;
+	res = stmt->executeQuery("SELECT id FROM SalesEstimates_salesperiod;");
+	while (res->next()) {
+		sales_periods.push_back(res->getInt("id"));
+	}
+	return sales_periods;
+}
+
 string MySQL::clear_csp()
 {
 	ostringstream stream;
@@ -58,26 +77,13 @@ string MySQL::clear_csp()
 	return stream.str();
 }
 
-vector<int> MySQL::get_sales_periods()
-{
-	sql::Statement *stmt;
-	sql::ResultSet *res;
-	stmt = con->createStatement();
-	vector<int> sales_periods;
-	res = stmt->executeQuery("SELECT id FROM SalesEstimates_salesperiod;");
-	while (res->next()) {
-		sales_periods.push_back(res->getInt("id"));
-	}
-	return sales_periods;
-}
-
 string MySQL::generate_csp()
 {
 	ostringstream stream;
 	sql::Statement *stmt;
 	sql::ResultSet *res;
 	stmt = con->createStatement();
-	vector<int> sales_periods = get_sales_periods();
+	vector<int> sales_periods = _get_sales_periods();
 
 	res = stmt->executeQuery("SELECT id, dft_store_count FROM SalesEstimates_customer;");
 	ostringstream query_stream;
@@ -113,7 +119,7 @@ string MySQL::add_customer_csp(int cust_id)
 	sql::ResultSet *res;
 	sql::PreparedStatement *pstmt;
 	stmt = con->createStatement();
-	vector<int> sales_periods = get_sales_periods();
+	vector<int> sales_periods = _get_sales_periods();
 
 	pstmt = con->prepareStatement("SELECT name, dft_store_count FROM SalesEstimates_customer WHERE id=?;");
 	pstmt->setInt(1, cust_id);
