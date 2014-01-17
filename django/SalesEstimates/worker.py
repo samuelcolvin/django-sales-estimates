@@ -12,17 +12,19 @@ import time
 def generate_sales_periods(log):
     start_date = dtdt.strptime(settings.SALES_PERIOD_START_DATE, settings.CUSTOM_DATE_FORMAT)
     system_finish_date = dtdt.strptime(settings.SALES_PERIOD_FINISH_DATE, settings.CUSTOM_DATE_FORMAT)
-    months = settings.SALES_PERIOD_LENGTH
-    periods = []
+    week_start_day = 0
+    if hasattr(settings, 'WEEK_START_DAY'):
+        week_start_day = settings.WEEK_START_DAY
+    aday = td(days=1)
+    while start_date.weekday() != week_start_day:
+        start_date += aday
     
-    while start_date < system_finish_date:
-        next_start_month = start_date.month + months
-        next_start_date = start_date
-        if next_start_month > 12:
-            next_start_month = next_start_month % 12
-            next_start_date = next_start_date.replace(year = start_date.year + 1)
-        next_start_date = next_start_date.replace(month = next_start_month)
-        finish_date = next_start_date - td(days=1)
+    periods = []
+    while True:
+        next_start_date = start_date + aday * 7
+        finish_date = next_start_date - aday
+        if finish_date > system_finish_date:
+            break
         periods.append({'start': start_date, 'finish': finish_date})
         start_date = next_start_date
     
