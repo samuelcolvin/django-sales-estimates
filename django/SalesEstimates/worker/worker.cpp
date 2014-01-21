@@ -66,7 +66,7 @@ string MySQL::connect(string db_name, string user, string password, string conne
 		driver = get_driver_instance();
 		con = driver->connect(connection, user, password);
 		con->setSchema(db_name);
-		stream << "Successfully connected to " << connection << " > " << db_name;
+		stream << "Successfully connected to " << connection << " > " << db_name << endl;
 	} catch (sql::SQLException &e) {
 		raise_error(e, stream, __FUNCTION__);
 	}
@@ -89,7 +89,7 @@ string MySQL::clear_csp()
 
 		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_customersalesperiod;");
 		res->next();
-		stream << "Deleting " << res->getInt(1) << " Customer Sales Period Records";
+		stream << "Deleting " << res->getInt(1) << " Customer Sales Period Records" << endl;
 		stmt->execute("DELETE FROM SalesEstimates_customersalesperiod;");
 	} catch (sql::SQLException &e) {
 		raise_error(e, stream, __FUNCTION__);
@@ -126,7 +126,7 @@ string MySQL::generate_csp()
 		}
 		query_stream << ";";
 		stmt->execute(query_stream.str());
-		stream << "Added " << add_count << " Customer Sales Period Records";
+		stream << "Added " << add_count << " Customer Sales Period Records" << endl;
 
 		delete res;
 		delete stmt;
@@ -168,7 +168,7 @@ string MySQL::add_customer_csp(int cust_id)
 		query_stream << ";";
 		query = query_stream.str();
 		stmt->execute(query);
-		stream << "Added " << add_count << " Customer Sales Period Records";
+		stream << "Added " << add_count << " Customer Sales Period Records" << endl;
 		delete res;
 		delete stmt;
 	} catch (sql::SQLException &e) {

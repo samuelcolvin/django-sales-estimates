@@ -58,7 +58,7 @@ class Generate(viewb.TemplateBase, TabsMixin):
     template_name = 'generate.html'
     top_active = 'process'
     side_menu = False
-    worker_funcs={'gcsp': {'func': worker.generate_customer_sp, 'msg': 'Successfully Generated Customer Sales Periods '},
+    worker_funcs={'gcsp': {'func': worker.generate_customer_sp, 'msg': 'Successfully Generated Customer Sales Periods'},
                   'gskusales': {'func': worker.generate_skusales, 'msg': 'Successfully Generated Sales Estimates'}}
     
     def setup_context(self, **kw):
@@ -102,9 +102,8 @@ class Generate(viewb.TemplateBase, TabsMixin):
             
 
 class ResultsDisplayModel(sk_views.DisplayModel, TabsMixin):
-    top_active = 'process'
     side_menu_items = ('SKUGroup', 'SKU', 'Customer')
-    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results'}
+    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'process'}
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
@@ -114,9 +113,8 @@ class ResultsDisplayModel(sk_views.DisplayModel, TabsMixin):
         self.generate_tabs('results')
         
 class ResultsDisplayItem(sk_views.DisplayItem, TabsMixin):
-    top_active = 'process'
     side_menu_items = ('SKUGroup', 'SKU', 'Customer')
-    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results'}
+    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'process'}
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
