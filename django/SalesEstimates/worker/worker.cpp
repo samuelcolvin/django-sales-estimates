@@ -471,20 +471,6 @@ void print_columns(sql::ResultSet *rs)
 	cout << "\" which belongs to the Schema: \"" << res_meta -> getSchemaName(1) << "\"" << endl;
 }
 
-//	sql::PreparedStatement *pstmt;
-//	pstmt = con->prepareStatement("INSERT INTO SalesEstimates_customersalesperiod(customer_id, period_id, store_count) VALUES (?, ?, ?)");
-//	while (res->next()) {
-//		cout << "id: " << res->getInt("id") << ", name: " << res->getString("name") << endl;
-//		for (int spi= 0; spi < sales_periods; spi++)
-//		{
-//			pstmt->setInt(1, res->getInt("id"));
-//			pstmt->setInt(2, sales_period_ids[spi]);
-//			pstmt->setInt(3, res->getInt("dft_store_count"));
-//			pstmt->execute();
-//		}
-//	}
-//	delete pstmt;
-
 #ifdef PYTHON
 
 BOOST_PYTHON_MODULE(worker)
@@ -502,6 +488,7 @@ BOOST_PYTHON_MODULE(worker)
 
 int main(int, char*[])
 {
+	//not working - would need some work it this file were to be tested outside python
 	connect();
 }
 #endif
