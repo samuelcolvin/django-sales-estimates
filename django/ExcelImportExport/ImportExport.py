@@ -93,7 +93,9 @@ class ReadXl(_ImportExport):
         ws = self._wb.get_sheet_by_name(name = self._sheet_name)
         self._row = sheet_model.imex_top_offset
         headings = self._get_headings(ws)
-#         self._log('column names: %s' % str(headings))
+        if None in headings:
+            del headings[None]
+        self._log('column names: %r' % headings)
         extra = sheet_model.ImportExtra(ws, headings)
         self._row = self._row + 1
         import_count = 0

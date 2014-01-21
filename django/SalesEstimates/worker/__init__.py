@@ -7,7 +7,8 @@ from django.db import models as db_models
 import inspect
 import decimal
 from django.db import transaction
-import time
+from time import time
+import worker
 
 def generate_sales_periods(log):
     start_date = dtdt.strptime(settings.SALES_PERIOD_START_DATE, settings.CUSTOM_DATE_FORMAT)
@@ -47,64 +48,32 @@ def generate_sales_periods(log):
     log('created %d sales periods' % m.SalesPeriod.objects.count())
     
 def generate_customer_sp(log):
-    t = time.time()
-    existing = m.CustomerSalesPeriod.objects.all()
-    log('deleting %d existing Customer Sales Periods' % existing.count())
-    existing.delete()
-    added = 0
-    for customer in m.Customer.objects.all().iterator():
-        for sp in m.SalesPeriod.objects.all().iterator():
-            m.CustomerSalesPeriod.objects.create(customer = customer, period = sp)
-            added +=1
-    diff_mid = time.time() - t
-    log('generated %d Customer Sales Periods in %0.3f secs' % (added, diff_mid))
+    start = time()
+    mysql, msgs = _get_con()
+    msgs += mysql.clear_csp()
+    msgs += mysql.generate_csp()
+    print msgs
+    [log(msg) for msg in msgs.split('\n')]
+    log('Time taken: %0.3f seconds' % (time() - start))
 
 def generate_skusales(log):
-    t = time.time()
-    m.SKUSales.objects.all().delete()
-    log('deleted all existing SKU sales estimates')
-    sku_count = 0
-    decimal.getcontext().prec = 4
-    sku_sales_toadd = []
-    for csp in m.CustomerSalesPeriod.objects.all().iterator():
-        for cskui in m.CustomerSKUInfo.objects.filter(customer=csp.customer).iterator():
-            if csp.store_count != None and cskui.srf != None:
-                period_months = range(csp.period.start_date.month, csp.period.finish_date.month + 1)
-                month_vars = cskui.season_var.months.filter(month__in=period_months)
-                season_var_srf = 1
-                if month_vars.count() > 0:
-                    season_var_srf = month_vars.aggregate(mean = db_models.Avg('srf'))['mean']
-                sku_sales = m.SKUSales(period=csp, csku=cskui)
-                sku_sales.sales = csp.store_count * cskui.srf * settings.SALES_PERIOD_LENGTH * 4 * season_var_srf
-                sku_sales.income = decimal.Decimal(sku_sales.sales) * cskui.price
-                sku_sales_toadd.append(sku_sales)
-                sku_count += 1
-    if len(sku_sales_toadd) > 0:
-        m.SKUSales.objects.bulk_create(sku_sales_toadd)
-    log('%d SKU sale estimates added' % sku_count)
-    mid = time.time()
-    diff_mid = mid - t
-    log('time taken to create SKUSales: %0.3f' % diff_mid)
-    all_order_groups = m.OrderGroup.objects.all()
-    with transaction.commit_on_success():
-        for period in m.SalesPeriod.objects.all().iterator():
-            order_group_costs = {}
-            for order_group in all_order_groups:
-                sku_sales_group_period = m.SKUSales.objects.filter(period__period=period).filter(csku__sku__assemblies__components__order_group=order_group).distinct()
-                orders = calc_total_sales(sku_sales_group_period)
-                cost = 0
-                if orders is not None:
-                    cost = order_group.cost(orders)
-                order_group_costs[order_group.pk] = cost
-            for sku_sales in m.SKUSales.objects.filter(period__period = period).iterator():
-                order_groups = m.Component.objects.filter(order_group__components__assemblies__skus__c_skus__sku_sales = sku_sales).distinct().values_list('order_group__pk',flat=True)
-                sku_sales.cost = sum([order_group_costs[og] for og in order_groups])*decimal.Decimal(sku_sales.sales)
-                sku_sales.save()
-    diff = time.time() - t
-    diff_mid = diff - diff_mid
-    log('time taken to calculate costs: %0.3f' % diff_mid)
-    log('total time taken: %0.3f' % diff)
-            
+    start = time()
+    mysql, msgs = _get_con()
+    msgs += mysql.generate_skusales()
+    print msgs
+    [log(msg) for msg in msgs.split('\n')]
+    log('Time taken: %0.3f seconds' % (time() - start))
+    
+def _get_con():
+    db = settings.DATABASES['default']
+    sql_engine = 'django.db.backends.mysql'
+    if db['ENGINE'] != sql_engine:
+        raise Exception('Wrong DB in use, for c++ based worker MySQL (%s) is required.' % sql_engine)
+    connection = 'tcp://%(HOST)s:%(PORT)s' % db
+    mysql = worker.MySQL()
+    msg = mysql.connect(db['NAME'], db['USER'], db['PASSWORD'], connection)
+    return (mysql, msg)
+
 def delete_before_upload(log):
     clear_se(log)
     generate_sales_periods(log)
@@ -117,16 +86,3 @@ def clear_se(log):
         if inspect.isclass(mod)  and issubclass(mod, db_models.Model) and not mod._meta.abstract:
             mod.objects.all().delete()
             log('Deleting all records from %s' % mod.__name__)
-            
-def calc_total_sales(sku_sales_group):
-    return sku_sales_group.aggregate(total_sales = db_models.Sum('sales'))['total_sales']
-
-# def calc_sku_sales_cost(sku_sales):
-#     cost = 0
-#     sp = sku_sales.period.period
-#     for comp in m.Component.objects.filter(assemblies__skus__c_skus__sku_sales=sku_sales).iterator():
-#         sku_sales_group_period = m.SKUSales.objects.filter(period__period=sp).filter(csku__sku__assemblies__components__order_group=comp.order_group)
-#         orders = calc_total_sales(sku_sales_group_period)
-#         cost += comp.order_group.cost(orders)*orders
-#     return cost
-    

@@ -112,6 +112,7 @@ class Assembly(BasicModel):
         verbose_name = 'Assembly'
 
 class AssyComponent(models.Model):
+    xl_id = models.IntegerField('Excel ID', default=-1, editable=False)
     component = models.ForeignKey(Component)
     assembly = models.ForeignKey(Assembly)
     count = models.IntegerField(default = 1)

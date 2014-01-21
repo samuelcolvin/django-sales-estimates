@@ -74,18 +74,23 @@ class Assembly(ExcelImportExport.ImExBase):
     imex_order = 2
     model = m.Assembly
     
-    class ImportExtra(ExcelImportExport.ImportM2MBase):
-        def __init__(self, *args, **kwargs):
-            self._m2m_field_name = 'components'
-            ExcelImportExport.ImportM2MBase.__init__(self, *args, **kwargs)
+#     class ImportExtra(ExcelImportExport.ImportM2MBase):
+#         def __init__(self, *args, **kwargs):
+#             self._m2m_field_name = 'components'
+#             ExcelImportExport.ImportM2MBase.__init__(self, *args, **kwargs)
+#     
+#     class ExportExtra(ExcelImportExport.M2MExport):
+#         def __init__(self, *args, **kwargs):
+#             self._m2m_field_name = 'components'
+#             self._main_model = m.Assembly
+#             self._lookups = [{'heading': '', 'sheet': 'Component'}]
+#             ExcelImportExport.M2MExport.__init__(self, *args, **kwargs)
     
-    class ExportExtra(ExcelImportExport.M2MExport):
-        def __init__(self, *args, **kwargs):
-            self._m2m_field_name = 'components'
-            self._main_model = m.Assembly
-            self._lookups = [{'heading': '', 'sheet': 'Component'}]
-            ExcelImportExport.M2MExport.__init__(self, *args, **kwargs)
     
+class Assembly(ExcelImportExport.ImExBase):
+    imex_fields = ExcelImportExport.default_imex_fields + ['count']
+    imex_order = 2.25
+    model = m.AssyComponent
         
 class SKUGroup(ExcelImportExport.ImExBase):
     imex_fields = ExcelImportExport.default_imex_fields
