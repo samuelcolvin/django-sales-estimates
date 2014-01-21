@@ -67,7 +67,7 @@ class Component(SkeletalDisplay.ModelDisplay):
 		name = SkeletalDisplay.SelfLinkColumn()
 		str_nominal_price = tables.Column(verbose_name='Nominal Price')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			exclude = ('id', 'description', 'nominal_price', 'xl_id')
+			exclude = ('description', 'nominal_price', 'xl_id')
 	
 	class HotTable(HotDjango.ModelSerialiser):
 		order_group = HotDjango.IDNameSerialiser(m.OrderGroup)
