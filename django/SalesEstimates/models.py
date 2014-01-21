@@ -89,7 +89,7 @@ class Component(BasicModel):
     
 class Assembly(BasicModel):
     size = models.CharField(max_length=200, null=True, blank=True)
-    components = models.ManyToManyField(Component, related_name='assemblies')
+    components = models.ManyToManyField(Component, through='AssyComponent', related_name='assemblies')
     
     def component_count(self):
         return self.components.count()
@@ -111,7 +111,11 @@ class Assembly(BasicModel):
         verbose_name_plural = 'Assemblies'
         verbose_name = 'Assembly'
 
-        
+class AssyComponent(models.Model):
+    component = models.ForeignKey(Component)
+    assembly = models.ForeignKey(Assembly)
+    count = models.IntegerField(default = 1)
+
 class SKUGroup(BasicModel):
     pass
 

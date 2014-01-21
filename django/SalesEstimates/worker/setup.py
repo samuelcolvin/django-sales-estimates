@@ -12,7 +12,8 @@ worker = Extension('worker',
                     define_macros = [('PYTHON', '1')],
                     include_dirs = ['/usr/include/cppconn', '/usr/include/boost'],
                     libraries = ['mysqlcppconn', 'boost_python'],
-                    sources = ['worker.cpp'])
+                    sources = ['worker.cpp'],
+                    extra_compile_args = ['-std=c++11'])
 
 setup (name = 'worker',
        version = VERSION,

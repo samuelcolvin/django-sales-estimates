@@ -28,11 +28,15 @@ using namespace boost::python;
 
 using namespace std;
 void raise_error(sql::SQLException e, ostringstream &stream, string func);
+void print_columns(sql::ResultSet *rs);
+
+typedef pair<struct tm, struct tm> SalesPeriod;
+typedef pair<int, int> IntInt;
 
 class MySQL {
 	sql::Connection *con;
 	vector<int> _get_sales_periods();
-	map<int, SalesPeriod> _get_sales_period_periods()
+	map<int, SalesPeriod> _get_sales_period_periods();
   public:
 	string connect(string, string, string, string);
 
@@ -78,6 +82,11 @@ string MySQL::clear_csp()
 		sql::ResultSet *res;
 
 		stmt = con->createStatement();
+		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_skusales;");
+		res->next();
+		stream << "Deleting " << res->getInt(1) << " SKU Sales Records" << endl;
+		stmt->execute("DELETE FROM SalesEstimates_skusales;");
+
 		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_customersalesperiod;");
 		res->next();
 		stream << "Deleting " << res->getInt(1) << " Customer Sales Period Records";
@@ -198,7 +207,41 @@ string MySQL::update_cust_csp(int cust_id)
 	return stream.str();
 }
 
-typedef pair<struct tm, struct tm> SalesPeriod;
+class OrderGroup {
+	vector<int> order_levels;
+	vector<double> cost_levels;
+  public:
+	void add_group(int quantity, double price){
+		order_levels.push_back(quantity);
+		cost_levels.push_back(price);
+	}
+
+	void print(){
+		for (unsigned int j = 0; j < order_levels.size(); j++)
+			cout << "order_level: " << order_levels[j] << ", cost_levels: " << cost_levels[j] << endl;
+	}
+
+	float get_price(int quantity){
+		double price = 0;
+		if (order_levels.size() != 0){
+			price = cost_levels[0];
+			for (unsigned int i = 0; i < order_levels.size(); i++) {
+			  if (order_levels[i] > quantity)
+				  break;
+			  price = cost_levels[i];
+			}
+		}
+//		cout << "quantity: " << quantity << ", price: " << price << endl;
+//		print();
+		return price;
+	}
+};
+
+struct SKUSalesInfo {
+	int period_id;
+	int sales;
+	vector<IntInt> og__count;
+};
 
 string MySQL::generate_skusales()
 {
@@ -210,8 +253,6 @@ string MySQL::generate_skusales()
 		sql::ResultSet *res3;
 		stmt = con->createStatement();
 
-
-		stmt = con->createStatement();
 		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_skusales;");res->next();
 		stream << "Deleting " << res->getInt(1) << " SKU Sales Estimates" << endl;
 		stmt->execute("TRUNCATE SalesEstimates_skusales;");
@@ -255,42 +296,90 @@ string MySQL::generate_skusales()
 				query_stream << "(" << res->getInt("id") << "," << res2->getInt("id") << "," << sales << "," << income << ")";
 			}
 		}
-		query_stream << ";";
 //		stream << "query: " << query_stream.str() << endl;
 		stmt->execute(query_stream.str());
 		stream << "Added " << add_count << " Customer Sales Period Records";
-		res = stmt->executeQuery("SELECT id FROM SalesEstimates_salesperiod;");
-		while (res->next()) {
-			map<int, double> order_group_costs;
-			ostringstream orderg_q;
-			orderg_q << "SELECT sales FROM SalesEstimates_skusales" << endl;
-			orderg_q << "INNER JOIN"
-//SELECT * FROM SalesEstimates_skusales
-//LEFT JOIN SalesEstimates_customersalesperiod ON SalesEstimates_skusales.period_id = SalesEstimates_customersalesperiod.id
-//LEFT JOIN SalesEstimates_salesperiod ON SalesEstimates_customersalesperiod.period_id = SalesEstimates_salesperiod.id
-//LEFT JOIN SalesEstimates_customerskuinfo ON SalesEstimates_skusales.csku_id = SalesEstimates_customerskuinfo.id
-//LEFT JOIN SalesEstimates_sku ON SalesEstimates_customerskuinfo.sku_id = SalesEstimates_sku.id
-//LEFT JOIN SalesEstimates_sku_assemblies ON SalesEstimates_sku.id = SalesEstimates_sku_assemblies.sku_id
-//LEFT JOIN SalesEstimates_assembly ON SalesEstimates_sku_assemblies.assembly_id = SalesEstimates_assembly.id
-//LEFT JOIN SalesEstimates_assembly_components ON SalesEstimates_assembly.id = SalesEstimates_assembly_components.assembly_id
-//LEFT JOIN SalesEstimates_component ON SalesEstimates_assembly_components.component_id = SalesEstimates_component.id
-//LEFT JOIN SalesEstimates_ordergroup ON SalesEstimates_component.order_group_id = SalesEstimates_ordergroup.id
-//LEFT JOIN SalesEstimates_costlevel ON SalesEstimates_ordergroup.id = SalesEstimates_costlevel.order_group_id
-//GROUP BY SalesEstimates_skusales.id
 
-//SELECT SKUS.id, SKUS.sales, CSP.period_id, OG.id FROM SalesEstimates_skusales SKUS
-//LEFT JOIN SalesEstimates_customersalesperiod CSP ON SKUS.period_id = CSP.id
-//#LEFT JOIN SalesEstimates_salesperiod ON CSP.period_id = SalesEstimates_salesperiod.id
-//LEFT JOIN SalesEstimates_customerskuinfo ON SKUS.csku_id = SalesEstimates_customerskuinfo.id
-//LEFT JOIN SalesEstimates_sku ON SalesEstimates_customerskuinfo.sku_id = SalesEstimates_sku.id
-//LEFT JOIN SalesEstimates_sku_assemblies ON SalesEstimates_sku.id = SalesEstimates_sku_assemblies.sku_id
-//LEFT JOIN SalesEstimates_assembly ON SalesEstimates_sku_assemblies.assembly_id = SalesEstimates_assembly.id
-//LEFT JOIN SalesEstimates_assembly_components ON SalesEstimates_assembly.id = SalesEstimates_assembly_components.assembly_id
-//LEFT JOIN SalesEstimates_component ON SalesEstimates_assembly_components.component_id = SalesEstimates_component.id
-//LEFT JOIN SalesEstimates_ordergroup OG ON SalesEstimates_component.order_group_id = OG.id
-//#LEFT JOIN SalesEstimates_costlevel ON SalesEstimates_ordergroup.id = SalesEstimates_costlevel.order_group_id
-//GROUP BY SKUS.id
+		query_stream.str("");
+		query_stream.clear();
+		query_stream << "SELECT SKUS.id sku_sales_id, SKUS.sales sales, CSP.period_id period_id, OG.id og_id, AC.count c_count FROM SalesEstimates_skusales SKUS" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_customersalesperiod CSP ON SKUS.period_id = CSP.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_customerskuinfo ON SKUS.csku_id = SalesEstimates_customerskuinfo.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_sku ON SalesEstimates_customerskuinfo.sku_id = SalesEstimates_sku.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_sku_assemblies ON SalesEstimates_sku.id = SalesEstimates_sku_assemblies.sku_id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_assembly ON SalesEstimates_sku_assemblies.assembly_id = SalesEstimates_assembly.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_assycomponent AC ON SalesEstimates_assembly.id = AC.assembly_id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_component ON AC.component_id = SalesEstimates_component.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_ordergroup OG ON SalesEstimates_component.order_group_id = OG.id" << endl;
+		query_stream << "ORDER BY sku_sales_id";
+		res = stmt->executeQuery(query_stream.str());
+
+		map<IntInt, int> og_total_sales;
+		map<IntInt, int>::iterator it;
+		IntInt iorder;
+		int prev_sales, sk_sales_id;
+
+		map<int, SKUSalesInfo> sku_sales_infos;
+		map<int, SKUSalesInfo>::iterator it_skusa;
+
+		while (res->next()) {
+			iorder = IntInt(res->getInt("period_id"), res->getInt("og_id"));
+			prev_sales = 0;
+			it = og_total_sales.find(iorder);
+			if(it != og_total_sales.end())
+			{ prev_sales = it->second; }
+			og_total_sales[iorder] = prev_sales + res->getInt("sales") * res->getInt("c_count");
+			sk_sales_id = res->getInt("sku_sales_id");
+			it_skusa = sku_sales_infos.find(sk_sales_id);
+			if (it_skusa == sku_sales_infos.end()){
+				sku_sales_infos[sk_sales_id] = {res->getInt("period_id"), res->getInt("sales"), {IntInt(res->getInt("og_id"), res->getInt("c_count"))}};
+			} else{
+				it_skusa->second.og__count.push_back(IntInt(res->getInt("og_id"), res->getInt("c_count")));
+			}
 		}
+		query_stream.str("");
+		query_stream.clear();
+		query_stream << "SELECT order_group_id, order_quantity, price FROM SalesEstimates_costlevel" << endl;
+		query_stream << "ORDER BY order_group_id, order_quantity";
+		res = stmt->executeQuery(query_stream.str());
+		OrderGroup order_group;
+		int old_og_id = -1;
+		map<int, OrderGroup> order_group_calcs;
+		while (res->next()) {
+			if (old_og_id != res->getInt("order_group_id") && old_og_id != -1){
+				order_group_calcs[old_og_id] = order_group;
+				order_group = OrderGroup();
+			}
+			order_group.add_group(res->getInt("order_quantity"), res->getDouble("price"));
+			old_og_id = res->getInt("order_group_id");
+		}
+		order_group_calcs[old_og_id] = order_group;
+
+		map<IntInt, double> order_prices;
+		for (it = og_total_sales.begin(); it != og_total_sales.end(); ++it) {
+			order_prices[it->first] = order_group_calcs[it->first.second].get_price(it->second);
+		}
+
+		query_stream.str("");
+		query_stream.clear();
+		query_stream << "INSERT INTO SalesEstimates_skusales(id, cost) VALUES";
+		first_set = true;
+		double cost;
+		for(map<int, SKUSalesInfo>::iterator skui_it = sku_sales_infos.begin(); skui_it != sku_sales_infos.end(); skui_it++) {
+			if (!first_set)
+				query_stream << ",";
+			first_set = false;
+			cost = 0;
+
+			for(vector<IntInt>::iterator it2 = skui_it->second.og__count.begin(); it2 != skui_it->second.og__count.end(); it2++) {
+			    iorder = IntInt(skui_it->second.period_id, it2->first);
+			    cost += order_prices[iorder] * it2->second;
+			}
+			cost *= skui_it->second.sales;
+			query_stream << "(" << skui_it->first << "," << cost << ")";
+		}
+		query_stream << endl << "ON DUPLICATE KEY UPDATE cost=VALUES(cost);";
+		stmt->execute(query_stream.str());
 		delete res;
 		delete res2;
 		delete res3;
@@ -329,6 +418,7 @@ map<int, SalesPeriod> MySQL::_get_sales_period_periods()
 //			puts(buf);
 		sales_periods[res->getInt("id")] = SalesPeriod(start_tm,  finish_tm);
 	}
+	return sales_periods;
 }
 
 vector<int> MySQL::_get_sales_periods()
@@ -354,6 +444,31 @@ void raise_error(sql::SQLException e, ostringstream &stream, string func)
     PyErr_SetString(PyExc_RuntimeError, stream.str().c_str());
     throw_error_already_set();
 #endif
+}
+
+void print_columns(sql::ResultSet *rs)
+{
+	sql::ResultSetMetaData *res_meta;
+	res_meta = rs -> getMetaData();
+	int numcols = res_meta -> getColumnCount();
+	cout << "\nNumber of columns in the result set = " << numcols << endl;
+	cout.width(20);
+	cout << "Column Name/Label";
+	cout.width(20);
+	cout << "Column Type";
+	cout.width(20);
+	cout << "Column Size" << endl;
+	for (int i = 0; i < numcols; ++i) {
+	  cout.width(20);
+	  cout << res_meta -> getColumnLabel (i+1);
+	  cout.width(20);
+	  cout << res_meta -> getColumnTypeName (i+1);
+	  cout.width(20);
+	  cout << res_meta -> getColumnDisplaySize (i+1) << endl;
+	}
+	cout << "\nColumn \"" << res_meta -> getColumnLabel(1);
+	cout << "\" belongs to the Table: \"" << res_meta -> getTableName(1);
+	cout << "\" which belongs to the Schema: \"" << res_meta -> getSchemaName(1) << "\"" << endl;
 }
 
 //	sql::PreparedStatement *pstmt;
