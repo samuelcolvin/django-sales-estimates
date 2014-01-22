@@ -21,11 +21,11 @@ class TestSequenceFunctions(unittest.TestCase):
 	    print 'deleting customer: %r' % self.customer
 	    self.customer.delete()
 
-    def test_clear_generate(self):
+    def _test_clear_generate(self):
         print self.mysql.clear_csp()
         print self.mysql.generate_csp()
         
-    def test_customer_setup(self):
+    def _test_customer_setup(self):
 	first_store_count = 6
 	second_store_count = 10
 	self.customer = m.Customer.objects.create(name='test customer', dft_store_count=first_store_count)

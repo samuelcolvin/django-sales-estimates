@@ -87,8 +87,8 @@ class Assembly(ExcelImportExport.ImExBase):
 #             ExcelImportExport.M2MExport.__init__(self, *args, **kwargs)
     
     
-class Assembly(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields + ['count']
+class AssyComponent(ExcelImportExport.ImExBase):
+    imex_fields = ['xl_id', 'assembly', 'component', 'count']
     imex_order = 2.25
     model = m.AssyComponent
         
@@ -207,6 +207,9 @@ class SalesPeriod(ExcelImportExport.ImExBase):
                     else:
                         csp = m.CustomerSalesPeriod(customer=customer, period = sales_period)
                     csp.store_count = value
+                    csp.custom_store_count = False
+                    if value != customer.dft_store_count and value != None:
+                        csp.custom_store_count = True
                     csp.save()
             
     class ExportExtra(ExcelImportExport.RedExtra):

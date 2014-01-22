@@ -33,10 +33,27 @@ void print_columns(sql::ResultSet *rs);
 typedef pair<struct tm, struct tm> SalesPeriod;
 typedef pair<int, int> IntInt;
 
+struct CSKUI {
+	int id;
+	int sku_id;
+	int season_var_id;
+	double srf;
+	double price;
+};
+
+struct Promotion {
+	double srf;
+	double price_ratio;
+	vector<int> skus;
+};
+
 class MySQL {
 	sql::Connection *con;
 	vector<int> _get_sales_periods();
 	map<int, SalesPeriod> _get_sales_period_periods();
+	map<IntInt, double> _get_seasonal_vars();
+	map<int, vector<CSKUI>> _get_cskuis();
+	map<int, Promotion> _get_promotions();
   public:
 	string connect(string, string, string, string);
 
@@ -59,23 +76,23 @@ class MySQL {
 
 string MySQL::connect(string db_name, string user, string password, string connection)
 {
-	ostringstream stream;
+	ostringstream out_stream;
 	try{
 		sql::Driver *driver;
 
 		driver = get_driver_instance();
 		con = driver->connect(connection, user, password);
 		con->setSchema(db_name);
-		stream << "Successfully connected to " << connection << " > " << db_name << endl;
+		out_stream << "Successfully connected to " << connection << " > " << db_name << endl;
 	} catch (sql::SQLException &e) {
-		raise_error(e, stream, __FUNCTION__);
+		raise_error(e, out_stream, __FUNCTION__);
 	}
-	return stream.str();
+	return out_stream.str();
 }
 
 string MySQL::clear_csp()
 {
-	ostringstream stream;
+	ostringstream out_stream;
 	try
 	{
 		sql::Statement *stmt;
@@ -84,22 +101,22 @@ string MySQL::clear_csp()
 		stmt = con->createStatement();
 		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_skusales;");
 		res->next();
-		stream << "Deleting " << res->getInt(1) << " SKU Sales Records" << endl;
+		out_stream << "Deleting " << res->getInt(1) << " SKU Sales Records" << endl;
 		stmt->execute("DELETE FROM SalesEstimates_skusales;");
 
 		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_customersalesperiod;");
 		res->next();
-		stream << "Deleting " << res->getInt(1) << " Customer Sales Period Records" << endl;
+		out_stream << "Deleting " << res->getInt(1) << " Customer Sales Period Records" << endl;
 		stmt->execute("DELETE FROM SalesEstimates_customersalesperiod;");
 	} catch (sql::SQLException &e) {
-		raise_error(e, stream, __FUNCTION__);
+		raise_error(e, out_stream, __FUNCTION__);
 	}
-	return stream.str();
+	return out_stream.str();
 }
 
 string MySQL::generate_csp()
 {
-	ostringstream stream;
+	ostringstream out_stream;
 	try {
 		sql::Statement *stmt;
 		sql::ResultSet *res;
@@ -126,19 +143,19 @@ string MySQL::generate_csp()
 		}
 		query_stream << ";";
 		stmt->execute(query_stream.str());
-		stream << "Added " << add_count << " Customer Sales Period Records" << endl;
+		out_stream << "Added " << add_count << " Customer Sales Period Records" << endl;
 
 		delete res;
 		delete stmt;
 	} catch (sql::SQLException &e) {
-		raise_error(e, stream, __FUNCTION__);
+		raise_error(e, out_stream, __FUNCTION__);
 	}
-	return stream.str();
+	return out_stream.str();
 }
 
 string MySQL::add_customer_csp(int cust_id)
 {
-	ostringstream stream;
+	ostringstream out_stream;
 	try {
 		sql::Statement *stmt;
 		sql::ResultSet *res;
@@ -152,7 +169,7 @@ string MySQL::add_customer_csp(int cust_id)
 		res = stmt->executeQuery(query); res->next();
 		string name = res->getString("name");
 		int store_count = res->getInt("dft_store_count");
-		stream << "Generating CSP for  '" << name << "' with store count: " << store_count << endl;
+		out_stream << "Generating CSP for  '" << name << "' with store count: " << store_count << endl;
 		ostringstream query_stream;
 		query_stream << "INSERT INTO SalesEstimates_customersalesperiod(customer_id, period_id, store_count) VALUES";
 		bool first_set = true;
@@ -168,18 +185,18 @@ string MySQL::add_customer_csp(int cust_id)
 		query_stream << ";";
 		query = query_stream.str();
 		stmt->execute(query);
-		stream << "Added " << add_count << " Customer Sales Period Records" << endl;
+		out_stream << "Added " << add_count << " Customer Sales Period Records" << endl;
 		delete res;
 		delete stmt;
 	} catch (sql::SQLException &e) {
-		raise_error(e, stream, __FUNCTION__);
+		raise_error(e, out_stream, __FUNCTION__);
 	}
-	return stream.str();
+	return out_stream.str();
 }
 
 string MySQL::update_cust_csp(int cust_id)
 {
-	ostringstream stream;
+	ostringstream out_stream;
 	try {
 		sql::Statement *stmt;
 		sql::ResultSet *res;
@@ -193,7 +210,7 @@ string MySQL::update_cust_csp(int cust_id)
 		res = stmt->executeQuery(query); res->next();
 		string name = res->getString("name");
 		int store_count = res->getInt("dft_store_count");
-		stream << "Updating  '" << name << "' with store count: " << store_count << endl;
+		out_stream << "Updating  '" << name << "' with store count: " << store_count << endl;
 		ostringstream query_stream;
 		query_stream << "UPDATE SalesEstimates_customersalesperiod SET store_count=" << store_count;
 		query_stream << " WHERE customer_id=" << cust_id << " && custom_store_count=False;";
@@ -202,9 +219,9 @@ string MySQL::update_cust_csp(int cust_id)
 		delete res;
 		delete stmt;
 	} catch (sql::SQLException &e) {
-		raise_error(e, stream, __FUNCTION__);
+		raise_error(e, out_stream, __FUNCTION__);
 	}
-	return stream.str();
+	return out_stream.str();
 }
 
 class OrderGroup {
@@ -245,60 +262,73 @@ struct SKUSalesInfo {
 
 string MySQL::generate_skusales()
 {
-	ostringstream stream;
+	ostringstream out_stream;
 	try {
 		sql::Statement *stmt;
 		sql::ResultSet *res;
-		sql::ResultSet *res2;
-		sql::ResultSet *res3;
 		stmt = con->createStatement();
 
 		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_skusales;");res->next();
-		stream << "Deleting " << res->getInt(1) << " SKU Sales Estimates" << endl;
+		out_stream << "Deleting " << res->getInt(1) << " SKU Sales Estimates" << endl;
 		stmt->execute("TRUNCATE SalesEstimates_skusales;");
 
 		map<int, SalesPeriod> sales_periods = _get_sales_period_periods();
+		map<IntInt, double> seasonal_vars = _get_seasonal_vars();
+		map<IntInt, double>::iterator it_db;
 
-		res = stmt->executeQuery("SELECT id, customer_id, period_id, store_count FROM SalesEstimates_customersalesperiod;");
+		map<int, vector<CSKUI>> cskuis_customer = _get_cskuis();
+		vector<CSKUI> cskuis;
+		vector<CSKUI>::iterator it_cskui;
+
+		map<int, Promotion> promotions = _get_promotions();
+		Promotion promotion;
+
+		res = stmt->executeQuery("SELECT id, customer_id, period_id, store_count, promotion_id FROM SalesEstimates_customersalesperiod");
 		ostringstream query_stream;
 		query_stream << "INSERT INTO SalesEstimates_skusales(period_id, csku_id, sales, income) VALUES";
 		bool first_set = true;
 		int start_month;
-		double seasonal_srf, sales, store_count, cskui_srf, cskui_price, income;
+		double seasonal_srf, sales, store_count, income, prom_srf, prom_price_ratio;
 		SalesPeriod period;
+		bool has_prom = false;
 		int add_count = 0;
 		while (res->next()) {
 			period = sales_periods[res->getInt("period_id")];
 			store_count = (double)res->getInt("store_count");
 			start_month = period.first.tm_mon + 1;
-			ostringstream query_cskui;
-			query_cskui << "SELECT id, season_var_id, srf, price FROM SalesEstimates_customerskuinfo WHERE customer_id=" << res->getInt("customer_id") << ";";
-			res2 = stmt->executeQuery(query_cskui.str());
-			while (res2->next()) {
+
+			cskuis = cskuis_customer[res->getInt("customer_id")];
+			has_prom = res->getInt("promotion_id") != 0;
+			if (has_prom){
+				promotion = promotions[res->getInt("promotion_id")];
+			}
+			for(it_cskui = cskuis.begin(); it_cskui != cskuis.end(); ++it_cskui) {
 				if (!first_set)
 					query_stream << ",";
 				first_set = false;
-				ostringstream month_q;
-				month_q << "SELECT srf FROM SalesEstimates_monthvariation WHERE season_var_id=" << res2->getInt("season_var_id");
-				month_q << " && month=" << start_month << ";";
-				seasonal_srf = 1;
-				res3 = stmt->executeQuery(month_q.str());
-				if (res3->next())
-				{
-					seasonal_srf = res3->getDouble("srf");
+
+				it_db = seasonal_vars.find(IntInt(it_cskui->season_var_id, start_month));
+				seasonal_srf = it_db != seasonal_vars.end() ? it_db->second : 1;
+
+				prom_srf = 1;
+				prom_price_ratio = 1;
+				if (has_prom){
+					if(find(promotion.skus.begin(), promotion.skus.end(), it_cskui->sku_id) != promotion.skus.end()){
+						prom_srf = promotion.srf;
+						prom_price_ratio = promotion.price_ratio;
+					}
 				}
-				cskui_srf = res2->getDouble("srf");
-				cskui_price = res2->getDouble("price");
-				sales = store_count*cskui_srf*seasonal_srf;
-				income = sales*cskui_price;
-//				stream << "sales: " << sales << ", income: " << income << endl;
+
+				sales = store_count * it_cskui->srf * seasonal_srf * prom_srf;
+				income = sales * it_cskui->price * prom_price_ratio;
+//				out_stream << "sales: " << sales << ", income: " << income << endl;
 				add_count++;
-				query_stream << "(" << res->getInt("id") << "," << res2->getInt("id") << "," << sales << "," << income << ")";
+				query_stream << "(" << res->getInt("id") << "," << it_cskui->id << "," << sales << "," << income << ")";
 			}
 		}
-//		stream << "query: " << query_stream.str() << endl;
+//		out_stream << "query: " << query_stream.str() << endl;
 		stmt->execute(query_stream.str());
-		stream << "Added " << add_count << " Customer Sales Period Records";
+		out_stream << "Added " << add_count << " Customer Sales Period Records";
 
 		query_stream.str("");
 		query_stream.clear();
@@ -381,13 +411,84 @@ string MySQL::generate_skusales()
 		query_stream << endl << "ON DUPLICATE KEY UPDATE cost=VALUES(cost);";
 		stmt->execute(query_stream.str());
 		delete res;
-		delete res2;
-		delete res3;
 		delete stmt;
 	} catch (sql::SQLException &e) {
-		raise_error(e, stream, __FUNCTION__);
+		raise_error(e, out_stream, __FUNCTION__);
 	}
-	return stream.str();
+	return out_stream.str();
+}
+
+map<int, Promotion> MySQL::_get_promotions()
+{
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	stmt = con->createStatement();
+	map<int, Promotion> promotions;
+	ostringstream query_stream;
+	query_stream << "SELECT PROM.id p_id, PROM.srf srf, PROM.price_ratio price_ratio, SKU.id sku_id FROM SalesEstimates_sku SKU" << endl;
+	query_stream << "JOIN SalesEstimates_promotion_skus ON SKU.id = SalesEstimates_promotion_skus.sku_id" << endl;
+	query_stream << "JOIN SalesEstimates_promotion PROM ON SalesEstimates_promotion_skus.promotion_id = PROM.id" << endl;
+	query_stream << "ORDER BY p_id";
+	res = stmt->executeQuery(query_stream.str());
+
+	int p_id;
+	int old_p_id = -1;
+	while (res->next()) {
+		p_id = res->getInt("p_id");
+		if (old_p_id != p_id){
+			promotions[p_id] = {(double)res->getDouble("srf"), (double)res->getDouble("price_ratio"), {res->getInt("sku_id")}};
+		} else{
+			promotions[p_id].skus.push_back(res->getInt("sku_id"));
+		}
+		old_p_id = p_id;
+	}
+	delete res;
+
+//	for (map<int, Promotion>::iterator iter = promotions.begin(); iter != promotions.end(); ++iter) {
+//		cout << "promotion: " << iter->first << ": srf: " << iter->second.srf << ", price_ratio: " << iter->second.price_ratio << endl;
+//		cout << "   sku: ";
+//		for(vector<int>::iterator iter2 = iter->second.skus.begin(); iter2 != iter->second.skus.end(); ++iter2) {
+//			cout << *iter2 << ", ";
+//		}
+//		cout << endl;
+//	}
+	return promotions;
+}
+
+map<int, vector<CSKUI>> MySQL::_get_cskuis()
+{
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	stmt = con->createStatement();
+	map<int, vector<CSKUI>> cskui_customer;
+	res = stmt->executeQuery("SELECT customer_id, id, sku_id, season_var_id, srf, price FROM SalesEstimates_customerskuinfo ORDER BY customer_id");
+	while (res->next()) {
+		cskui_customer[res->getInt("customer_id")].push_back({
+			res->getInt("id"),
+			res->getInt("sku_id"),
+			res->getInt("season_var_id"),
+			(double)res->getDouble("srf"),
+			(double)res->getDouble("price")
+		});
+	}
+	delete res;
+	return cskui_customer;
+}
+
+map<IntInt, double> MySQL::_get_seasonal_vars()
+{
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	stmt = con->createStatement();
+	map<IntInt, double> seasonal_vars;
+	res = stmt->executeQuery("SELECT season_var_id, month, srf FROM SalesEstimates_monthvariation");
+	IntInt seasonal_var;
+	while (res->next()) {
+		seasonal_var = IntInt(res->getInt("season_var_id"), res->getInt("month"));
+		seasonal_vars[seasonal_var] = res->getDouble("srf");
+	}
+	delete res;
+	return seasonal_vars;
 }
 
 map<int, SalesPeriod> MySQL::_get_sales_period_periods()
@@ -407,7 +508,6 @@ map<int, SalesPeriod> MySQL::_get_sales_period_periods()
 		mktime(&start_tm);
 		strptime(res->getString(3).c_str(), "%Y-%m-%d", &finish_tm);
 		mktime(&finish_tm);
-
 //			cout << res->getInt("id") << endl;
 //			char buf [80];
 //			strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &start_tm);
@@ -418,6 +518,7 @@ map<int, SalesPeriod> MySQL::_get_sales_period_periods()
 //			puts(buf);
 		sales_periods[res->getInt("id")] = SalesPeriod(start_tm,  finish_tm);
 	}
+	delete res;
 	return sales_periods;
 }
 

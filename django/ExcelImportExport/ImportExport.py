@@ -95,7 +95,7 @@ class ReadXl(_ImportExport):
         headings = self._get_headings(ws)
         if None in headings:
             del headings[None]
-        self._log('column names: %r' % headings)
+#         self._log('column names: %r' % headings)
         extra = sheet_model.ImportExtra(ws, headings)
         self._row = self._row + 1
         import_count = 0

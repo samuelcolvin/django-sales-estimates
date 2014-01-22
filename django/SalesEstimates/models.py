@@ -117,13 +117,6 @@ class AssyComponent(models.Model):
     assembly = models.ForeignKey(Assembly)
     count = models.IntegerField(default = 1)
 
-class SKUGroup(BasicModel):
-    pass
-
-    class Meta:
-        verbose_name_plural = 'SKU Groups'
-        verbose_name = 'SKU Group'
-
 class SeasonalVariation(BasicModel):
     pass
     
@@ -159,6 +152,13 @@ class MonthVariation(models.Model):
     class Meta:
         unique_together = (('season_var', 'month'),)
 
+class SKUGroup(BasicModel):
+    pass
+
+    class Meta:
+        verbose_name_plural = 'SKU Groups'
+        verbose_name = 'SKU Group'
+
 class SKU(BasicModel):
     assemblies = models.ManyToManyField(Assembly, related_name='skus')
     dft_price = models.DecimalField('Default Sales Price', max_digits=11, decimal_places=2, null = True)
@@ -186,6 +186,18 @@ class SKU(BasicModel):
     class Meta:
         verbose_name_plural = 'SKUs'
         verbose_name = 'SKU'
+        
+class Promotion(BasicModel):
+    srf = models.FloatField('Sale Rate Factor', default=1)
+    price_ratio = models.FloatField('Price Ratio', default=1)
+    price_ratio.help_text = """"Ratio of discount price to normal price, eg.:
+0.5 for "half price" or "buy one, get one free".
+0.667 for "3 for the price of 2."""
+    skus = models.ManyToManyField(SKU, related_name='promotions')
+    
+    class Meta:
+        verbose_name_plural = 'Promotions'
+        verbose_name = 'Promotion'
 
 class Customer(BasicModel):
     dft_srf = models.FloatField('Default Sale Rate Factor', default = 1)
@@ -278,6 +290,7 @@ class CustomerSalesPeriod(models.Model):
     period = models.ForeignKey(SalesPeriod, related_name='c_sales_periods')
     store_count = models.IntegerField(null = True)
     custom_store_count = models.BooleanField('Has Custom Store Count')
+    promotion = models.ForeignKey(Promotion, related_name='c_sales_periods', blank=True, null=True)
     
     def str_period(self):
         return self.period.str_simple_date()
