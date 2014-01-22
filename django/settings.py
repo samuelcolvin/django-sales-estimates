@@ -203,6 +203,11 @@ INTERNAL_IPS = ('127.0.0.1',)
 #ExcelImportExport Settings
 IMEX_APP = 'SalesEstimates'
 
+# Sales Estimates settings
+
+# number of weeks orders are for
+ORDER_DURATION = 13
+
 #sales period length on months
 SALES_PERIOD_START_DATE = '2014-01-01'
 SALES_PERIOD_FINISH_DATE = '2016-01-01'

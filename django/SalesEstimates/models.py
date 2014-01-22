@@ -45,7 +45,7 @@ class OrderGroup(BasicModel):
 class CostLevel(models.Model):
     order_group = models.ForeignKey(OrderGroup, related_name='costlevels')
     order_quantity = models.IntegerField(default=0)
-    price = models.DecimalField('Price per unit', max_digits=11, decimal_places=2)
+    price = models.DecimalField('Price per unit', max_digits=11, decimal_places=4)
     
     def str_price(self):
         return price_str(self.price)
@@ -321,6 +321,7 @@ class SKUSales(models.Model):
     sales = models.FloatField('Number of SKUs sold', default=0)
     xl_id = models.IntegerField('Excel ID', default=-1)
     income = models.DecimalField('Income from sales', max_digits=11, decimal_places=4, default = 0)
+    # to be removed:
     cost = models.DecimalField('cost of SKUs sold', max_digits=11, decimal_places=4, default = 0)
     
     def sku_name(self):
@@ -336,3 +337,20 @@ class SKUSales(models.Model):
     class Meta:
         verbose_name_plural = 'SKU Sales'
         verbose_name = 'SKU Sales'
+
+class Order(models.Model):
+    xl_id = models.IntegerField('Excel ID', default=-1)
+    start_period = models.ForeignKey(SalesPeriod, related_name='orders_start')
+    end_period = models.ForeignKey(SalesPeriod, related_name='orders_end')
+    order_group = models.ForeignKey(OrderGroup, related_name='orders')
+    items = models.IntegerField('Number of Components Ordered')
+    cost = models.DecimalField('cost of Components', max_digits=11, decimal_places=4)
+
+    
+    def __unicode__(self):
+        return '%s-%s: %d items costing %0.2f' % (self.start_period.str_start(), 
+                                                   self.end_period.str_finish(), self.items, self.cost)
+    
+    class Meta:
+        verbose_name_plural = 'Orders'
+        verbose_name = 'Order'
