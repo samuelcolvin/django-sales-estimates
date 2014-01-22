@@ -51,6 +51,7 @@ class TestSequenceFunctions(unittest.TestCase):
 	    
     def test_generate_skus(self):
 	print self.mysql.generate_skusales()
+    print self.mysql.calculate_demand(settings.ORDER_DURATION)
 
 if __name__ == '__main__':
     unittest.main()

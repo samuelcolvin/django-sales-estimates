@@ -1,78 +1,4 @@
-#include <stdlib.h>
-#include <iostream>
-#include <sstream>
-#include <algorithm>
-#include <vector>
-#include <time.h>
-
-/*
-  Include directly the different
-  headers from cppconn/ and mysql_driver.h + mysql_util.h
-  (and mysql_connection.h). This will reduce your build time!
-*/
-//#include "mysql_connection.h"
-
-#include <cppconn/driver.h>
-#include <cppconn/exception.h>
-#include <cppconn/resultset.h>
-#include <cppconn/statement.h>
-#include <cppconn/prepared_statement.h>
-
-#ifdef PYTHON
-
-#include <boost/python/module.hpp>
-//#include <boost/python/def.hpp>
-#include <boost/python.hpp>
-using namespace boost::python;
-#endif
-
-using namespace std;
-void raise_error(sql::SQLException e, ostringstream &stream, string func);
-void print_columns(sql::ResultSet *rs);
-
-typedef pair<struct tm, struct tm> SalesPeriod;
-typedef pair<int, int> IntInt;
-
-struct CSKUI {
-	int id;
-	int sku_id;
-	int season_var_id;
-	double srf;
-	double price;
-};
-
-struct Promotion {
-	double srf;
-	double price_ratio;
-	vector<int> skus;
-};
-
-class MySQL {
-	sql::Connection *con;
-	vector<int> _get_sales_periods();
-	map<int, SalesPeriod> _get_sales_period_periods();
-	map<IntInt, double> _get_seasonal_vars();
-	map<int, vector<CSKUI>> _get_cskuis();
-	map<int, Promotion> _get_promotions();
-  public:
-	string connect(string, string, string, string);
-
-	// to generate a whole set of sales periods (may require entire reset), to add extra sales periods
-	// TODO:
-	string regenerate_sales_periods();
-	string extend_sales_periods();
-
-	// to clear and generate the customer sales periods
-	string clear_csp();
-	string generate_csp();
-
-	// to add all the csp's for a new customer, and update their store count for an existing one
-	string add_customer_csp(int);
-	string update_cust_csp(int);
-
-	// generate the actual sku sales estimates
-	string generate_skusales();
-};
+#include "worker.h"
 
 string MySQL::connect(string db_name, string user, string password, string connection)
 {
@@ -224,42 +150,6 @@ string MySQL::update_cust_csp(int cust_id)
 	return out_stream.str();
 }
 
-class OrderGroup {
-	vector<int> order_levels;
-	vector<double> cost_levels;
-  public:
-	void add_group(int quantity, double price){
-		order_levels.push_back(quantity);
-		cost_levels.push_back(price);
-	}
-
-	void print(){
-		for (unsigned int j = 0; j < order_levels.size(); j++)
-			cout << "order_level: " << order_levels[j] << ", cost_levels: " << cost_levels[j] << endl;
-	}
-
-	float get_price(int quantity){
-		double price = 0;
-		if (order_levels.size() != 0){
-			price = cost_levels[0];
-			for (unsigned int i = 0; i < order_levels.size(); i++) {
-			  if (order_levels[i] > quantity)
-				  break;
-			  price = cost_levels[i];
-			}
-		}
-//		cout << "quantity: " << quantity << ", price: " << price << endl;
-//		print();
-		return price;
-	}
-};
-
-struct SKUSalesInfo {
-	int period_id;
-	int sales;
-	vector<IntInt> og__count;
-};
-
 string MySQL::generate_skusales()
 {
 	ostringstream out_stream;
@@ -272,7 +162,7 @@ string MySQL::generate_skusales()
 		out_stream << "Deleting " << res->getInt(1) << " SKU Sales Estimates" << endl;
 		stmt->execute("TRUNCATE SalesEstimates_skusales;");
 
-		map<int, SalesPeriod> sales_periods = _get_sales_period_periods();
+		map<int, SalesPeriod> sales_periods = _get_sales_period_dates();
 		map<IntInt, double> seasonal_vars = _get_seasonal_vars();
 		map<IntInt, double>::iterator it_db;
 
@@ -330,8 +220,35 @@ string MySQL::generate_skusales()
 		stmt->execute(query_stream.str());
 		out_stream << "Added " << add_count << " Customer Sales Period Records";
 
-		query_stream.str("");
-		query_stream.clear();
+		delete res;
+		delete stmt;
+	} catch (sql::SQLException &e) {
+		raise_error(e, out_stream, __FUNCTION__);
+	}
+	return out_stream.str();
+}
+
+class OrderCollection {
+	// TODO: got to here
+	vector<int> order_levels;
+	vector<double> cost_levels;
+  public:
+	void add_group(int, double);
+
+	void print();
+
+	float get_price(int);
+};
+
+string MySQL::calculate_demand(int combined_periods)
+{
+	ostringstream out_stream;
+	try {
+		sql::Statement *stmt;
+		sql::ResultSet *res;
+		stmt = con->createStatement();
+
+		ostringstream query_stream;
 		query_stream << "SELECT SKUS.id sku_sales_id, SKUS.sales sales, CSP.period_id period_id, OG.id og_id, AC.count c_count FROM SalesEstimates_skusales SKUS" << endl;
 		query_stream << "LEFT JOIN SalesEstimates_customersalesperiod CSP ON SKUS.period_id = CSP.id" << endl;
 		query_stream << "LEFT JOIN SalesEstimates_customerskuinfo ON SKUS.csku_id = SalesEstimates_customerskuinfo.id" << endl;
@@ -367,27 +284,23 @@ string MySQL::generate_skusales()
 				it_skusa->second.og__count.push_back(IntInt(res->getInt("og_id"), res->getInt("c_count")));
 			}
 		}
-		query_stream.str("");
-		query_stream.clear();
-		query_stream << "SELECT order_group_id, order_quantity, price FROM SalesEstimates_costlevel" << endl;
-		query_stream << "ORDER BY order_group_id, order_quantity";
-		res = stmt->executeQuery(query_stream.str());
-		OrderGroup order_group;
-		int old_og_id = -1;
-		map<int, OrderGroup> order_group_calcs;
-		while (res->next()) {
-			if (old_og_id != res->getInt("order_group_id") && old_og_id != -1){
-				order_group_calcs[old_og_id] = order_group;
-				order_group = OrderGroup();
-			}
-			order_group.add_group(res->getInt("order_quantity"), res->getDouble("price"));
-			old_og_id = res->getInt("order_group_id");
-		}
-		order_group_calcs[old_og_id] = order_group;
+		map<int, ComponentOrderGroup>order_group_calcs = _get_order_prices();
 
 		map<IntInt, double> order_prices;
 		for (it = og_total_sales.begin(); it != og_total_sales.end(); ++it) {
 			order_prices[it->first] = order_group_calcs[it->first.second].get_price(it->second);
+		}
+
+		map<int, SalesPeriod> sales_periods = _get_sales_period_dates();
+		int period_number = 1;
+		int start_period = 0;
+		for (map<int, SalesPeriod>::iterator iter = sales_periods.begin(); iter != sales_periods.end(); ++iter) {
+			if (period_number - start_period == combined_periods){
+				// finish orders
+				start_period = period_number + 1;
+			}
+			// TODO: got to here
+			period_number++;
 		}
 
 		query_stream.str("");
@@ -418,159 +331,7 @@ string MySQL::generate_skusales()
 	return out_stream.str();
 }
 
-map<int, Promotion> MySQL::_get_promotions()
-{
-	sql::Statement *stmt;
-	sql::ResultSet *res;
-	stmt = con->createStatement();
-	map<int, Promotion> promotions;
-	ostringstream query_stream;
-	query_stream << "SELECT PROM.id p_id, PROM.srf srf, PROM.price_ratio price_ratio, SKU.id sku_id FROM SalesEstimates_sku SKU" << endl;
-	query_stream << "JOIN SalesEstimates_promotion_skus ON SKU.id = SalesEstimates_promotion_skus.sku_id" << endl;
-	query_stream << "JOIN SalesEstimates_promotion PROM ON SalesEstimates_promotion_skus.promotion_id = PROM.id" << endl;
-	query_stream << "ORDER BY p_id";
-	res = stmt->executeQuery(query_stream.str());
 
-	int p_id;
-	int old_p_id = -1;
-	while (res->next()) {
-		p_id = res->getInt("p_id");
-		if (old_p_id != p_id){
-			promotions[p_id] = {(double)res->getDouble("srf"), (double)res->getDouble("price_ratio"), {res->getInt("sku_id")}};
-		} else{
-			promotions[p_id].skus.push_back(res->getInt("sku_id"));
-		}
-		old_p_id = p_id;
-	}
-	delete res;
-
-//	for (map<int, Promotion>::iterator iter = promotions.begin(); iter != promotions.end(); ++iter) {
-//		cout << "promotion: " << iter->first << ": srf: " << iter->second.srf << ", price_ratio: " << iter->second.price_ratio << endl;
-//		cout << "   sku: ";
-//		for(vector<int>::iterator iter2 = iter->second.skus.begin(); iter2 != iter->second.skus.end(); ++iter2) {
-//			cout << *iter2 << ", ";
-//		}
-//		cout << endl;
-//	}
-	return promotions;
-}
-
-map<int, vector<CSKUI>> MySQL::_get_cskuis()
-{
-	sql::Statement *stmt;
-	sql::ResultSet *res;
-	stmt = con->createStatement();
-	map<int, vector<CSKUI>> cskui_customer;
-	res = stmt->executeQuery("SELECT customer_id, id, sku_id, season_var_id, srf, price FROM SalesEstimates_customerskuinfo ORDER BY customer_id");
-	while (res->next()) {
-		cskui_customer[res->getInt("customer_id")].push_back({
-			res->getInt("id"),
-			res->getInt("sku_id"),
-			res->getInt("season_var_id"),
-			(double)res->getDouble("srf"),
-			(double)res->getDouble("price")
-		});
-	}
-	delete res;
-	return cskui_customer;
-}
-
-map<IntInt, double> MySQL::_get_seasonal_vars()
-{
-	sql::Statement *stmt;
-	sql::ResultSet *res;
-	stmt = con->createStatement();
-	map<IntInt, double> seasonal_vars;
-	res = stmt->executeQuery("SELECT season_var_id, month, srf FROM SalesEstimates_monthvariation");
-	IntInt seasonal_var;
-	while (res->next()) {
-		seasonal_var = IntInt(res->getInt("season_var_id"), res->getInt("month"));
-		seasonal_vars[seasonal_var] = res->getDouble("srf");
-	}
-	delete res;
-	return seasonal_vars;
-}
-
-map<int, SalesPeriod> MySQL::_get_sales_period_periods()
-{
-	sql::Statement *stmt;
-	sql::ResultSet *res;
-	stmt = con->createStatement();
-	map<int, SalesPeriod> sales_periods;
-	res = stmt->executeQuery("SELECT id, start_date, finish_date FROM SalesEstimates_salesperiod;");
-	struct tm start_tm;
-	struct tm finish_tm;
-	while (res->next()) {
-
-		memset(&start_tm, 0, sizeof(struct tm));
-		memset(&finish_tm, 0, sizeof(struct tm));
-		strptime(res->getString(2).c_str(), "%Y-%m-%d %z", &start_tm);
-		mktime(&start_tm);
-		strptime(res->getString(3).c_str(), "%Y-%m-%d", &finish_tm);
-		mktime(&finish_tm);
-//			cout << res->getInt("id") << endl;
-//			char buf [80];
-//			strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &start_tm);
-//			cout << "start_tm: ";
-//			puts(buf);
-//			strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &finish_tm);
-//			cout << "finish_tm: ";
-//			puts(buf);
-		sales_periods[res->getInt("id")] = SalesPeriod(start_tm,  finish_tm);
-	}
-	delete res;
-	return sales_periods;
-}
-
-vector<int> MySQL::_get_sales_periods()
-{
-	sql::Statement *stmt;
-	sql::ResultSet *res;
-	stmt = con->createStatement();
-	vector<int> sales_periods;
-	res = stmt->executeQuery("SELECT id FROM SalesEstimates_salesperiod;");
-	while (res->next()) {
-		sales_periods.push_back(res->getInt("id"));
-	}
-	return sales_periods;
-}
-
-void raise_error(sql::SQLException e, ostringstream &stream, string func)
-{
-	stream << "# ERR: SQLException in " << __FILE__ << ", function: " << func << endl;
-	stream << "# ERR: " << e.what();
-	stream << " (MySQL error code: " << e.getErrorCode();
-	stream << ", SQLState: " << e.getSQLState() << " )";
-#ifdef PYTHON
-    PyErr_SetString(PyExc_RuntimeError, stream.str().c_str());
-    throw_error_already_set();
-#endif
-}
-
-void print_columns(sql::ResultSet *rs)
-{
-	sql::ResultSetMetaData *res_meta;
-	res_meta = rs -> getMetaData();
-	int numcols = res_meta -> getColumnCount();
-	cout << "\nNumber of columns in the result set = " << numcols << endl;
-	cout.width(20);
-	cout << "Column Name/Label";
-	cout.width(20);
-	cout << "Column Type";
-	cout.width(20);
-	cout << "Column Size" << endl;
-	for (int i = 0; i < numcols; ++i) {
-	  cout.width(20);
-	  cout << res_meta -> getColumnLabel (i+1);
-	  cout.width(20);
-	  cout << res_meta -> getColumnTypeName (i+1);
-	  cout.width(20);
-	  cout << res_meta -> getColumnDisplaySize (i+1) << endl;
-	}
-	cout << "\nColumn \"" << res_meta -> getColumnLabel(1);
-	cout << "\" belongs to the Table: \"" << res_meta -> getTableName(1);
-	cout << "\" which belongs to the Schema: \"" << res_meta -> getSchemaName(1) << "\"" << endl;
-}
 
 #ifdef PYTHON
 
