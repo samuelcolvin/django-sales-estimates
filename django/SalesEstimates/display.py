@@ -144,6 +144,17 @@ class SeasonalVariation(SkeletalDisplay.ModelDisplay):
 	class HotTable(HotDjango.ModelSerialiser):
 		class Meta:
 			fields = ('id', 'name', 'description', 'comment', 'months')
+			
+class Promotion(SkeletalDisplay.ModelDisplay):
+	model = m.Promotion
+	index = 2.8
+	
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
+		srf = tables.Column(verbose_name='Sale Rate Factor')
+		price_ratio = tables.Column(verbose_name='Price Ratio')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
 	
 class SKU(SkeletalDisplay.ModelDisplay):
 	model = m.SKU

@@ -15,8 +15,8 @@
 * add front page showing summary incomplete things
 *DONE calculate sales estimates
 *DONE think about how sales periods are generated with import
-* get heavy lifting done separately
-* do estimation in c++???
+*DONE get heavy lifting done separately
+*DONE do estimation in c++???
 *DONE update skeletaldisplay README
 *DONE set secure passwords
 *DONE use bootstrap to prettify things
@@ -26,24 +26,27 @@
 * add account settings page and script to create users?? http://docs.django-userena.org/en/latest/index.html
 *DONE setup script to move to server straight from github
 * add function to remove spaces from above
-* possibly split ExcelImportExport right off, with handsontable(??) - probably not, leave excel as backend output
+*DONE possibly split ExcelImportExport right off, with handsontable(??) - probably not, leave excel as backend output
 *DONE add suppliers
 *DONE add sku groups
 *DONE add seasonal variation instances
 *DONE add sales rate factor to customers
-*DONE changed models to process, add tabs *************************************
-* include instructions on index page.
+*DONE changed models to process, add tabs
+*DONE include instructions on index page.
 *DONE process in three(?) steps
 *DONE add promotion instances - containing skus, customers, start/finish dates
-* get formsets working properly as in through different class
 * confirm forcasts
 *DONE add output: sku
 * add output: sku group
 * orders required
-* add summary of incomplete things
 * test calculation completely to check it's right
 * use numeral.js for formatting values in display page
 * add "paste mode" to django-hot
 *DONE edit templates so HOT works with multiple tags in the same page
-*DONE get formsets working in add/edit page
+
+* user external module for import/export
+* get formsets working properly as in through different class
+* group orders and account for discount (remember minimum order)
+* get formsets working properly in all add/edit pages
+
     

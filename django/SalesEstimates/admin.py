@@ -53,6 +53,11 @@ class SeasonalVariationAdmin(admin.ModelAdmin):
     
 admin.site.register(m.SeasonalVariation, SeasonalVariationAdmin)
 
+class PromotionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'srf', 'price_ratio')
+    
+admin.site.register(m.Promotion, PromotionAdmin)
+
 class CustomerSKUInfoInline(admin.TabularInline):
     model = m.CustomerSKUInfo
     extra = 5
