@@ -205,8 +205,8 @@ IMEX_APP = 'SalesEstimates'
 
 # Sales Estimates settings
 
-# number of weeks orders are for
-ORDER_DURATION = 13
+# number of weeks demands are grouped into
+DEMAND_GROUPING = 13
 
 #sales period length on months
 SALES_PERIOD_START_DATE = '2014-01-01'

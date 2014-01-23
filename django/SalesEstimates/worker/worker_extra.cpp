@@ -98,30 +98,32 @@ map<IntInt, double> MySQL::_get_seasonal_vars()
 	return seasonal_vars;
 }
 
-map<int, ComponentOrderGroup> MySQL::_get_order_prices()
+map<int, ComponentOrderGroup> MySQL::_get_order_group_costs()
 {
 	sql::Statement *stmt;
 	sql::ResultSet *res;
 	stmt = con->createStatement();
 
 	ostringstream query_stream;
-	query_stream << "SELECT order_group_id, order_quantity, price FROM SalesEstimates_costlevel" << endl;
+	query_stream << "SELECT CL.order_group_id, CL.order_quantity, CL.price, OG.minimum_order FROM SalesEstimates_costlevel CL" << endl;
+	query_stream << "LEFT JOIN SalesEstimates_ordergroup OG ON CL.order_group_id = OG.id" << endl;
 	query_stream << "ORDER BY order_group_id, order_quantity";
 	res = stmt->executeQuery(query_stream.str());
 	ComponentOrderGroup order_group;
 	int old_og_id = -1;
-	map<int, ComponentOrderGroup> order_group_calcs;
+	map<int, ComponentOrderGroup> order_group_costs;
 	while (res->next()) {
 		if (old_og_id != res->getInt("order_group_id") && old_og_id != -1){
-			order_group_calcs[old_og_id] = order_group;
+			order_group_costs[old_og_id] = order_group;
 			order_group = ComponentOrderGroup();
 		}
 		order_group.add_group(res->getInt("order_quantity"), res->getDouble("price"));
+		order_group.minimum_order = res->getInt("minimum_order");
 		old_og_id = res->getInt("order_group_id");
 	}
-	order_group_calcs[old_og_id] = order_group;
+	order_group_costs[old_og_id] = order_group;
 	delete res;
-	return order_group_calcs;
+	return order_group_costs;
 }
 
 map<int, SalesPeriod> MySQL::_get_sales_period_dates()
@@ -136,22 +138,83 @@ map<int, SalesPeriod> MySQL::_get_sales_period_dates()
 	while (res->next()) {
 		memset(&start_tm, 0, sizeof(struct tm));
 		memset(&finish_tm, 0, sizeof(struct tm));
-		strptime(res->getString(2).c_str(), "%Y-%m-%d", &start_tm);
+		strptime(res->getString("start_date").c_str(), "%Y-%m-%d", &start_tm);
 		mktime(&start_tm);
-		strptime(res->getString(3).c_str(), "%Y-%m-%d", &finish_tm);
+		strptime(res->getString("finish_date").c_str(), "%Y-%m-%d", &finish_tm);
 		mktime(&finish_tm);
-//			cout << res->getInt("id") << endl;
-//			char buf [80];
-//			strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &start_tm);
-//			cout << "start_tm: ";
-//			puts(buf);
-//			strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &finish_tm);
-//			cout << "finish_tm: ";
-//			puts(buf);
+//		cout << res->getInt("id") << ", start: "<< res->getString("start_date") << ", finish: "<< res->getString("finish_date") << endl;
+//		char buf [80];
+//		strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &start_tm);
+//		cout << "start_tm: ";
+//		puts(buf);
+//		strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &finish_tm);
+//		cout << "finish_tm: ";
+//		puts(buf);
 		sales_periods[res->getInt("id")] = SalesPeriod(start_tm,  finish_tm);
 	}
 	delete res;
 	return sales_periods;
+}
+
+string MySQL::_construct_demand(map<int, int> og_sales, int start_p, int end_p, int &add_count)
+{
+	cout << "Demand Period start: " << date_string(sales_periods[start_p].first) << endl;
+//	cout << "Demand Period end: " << date_string(sales_periods[end_p].second) << endl;
+
+	ostringstream query_stream;
+	bool first_set = true;
+	for (map<int, int>::iterator iter = og_sales.begin(); iter != og_sales.end(); ++iter) {
+		if (!first_set)
+			query_stream << ",";
+		first_set = false;
+		query_stream << "(" << start_p << "," << end_p << "," << iter->first << ","  << iter->second << ")";
+		add_count++;
+	}
+	return query_stream.str();
+}
+
+string MySQL::_construct_order(int items, int start_period_id, int og_id, vector<int> demand_ids, int &add_count, bool &first_set)
+{
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	stmt = con->createStatement();
+	double cost = order_group_costs[og_id].get_price(items) * (double)items;
+	struct tm start_date = sales_periods[start_period_id].first;
+	string date_str = mysql_date_string(start_date);
+	ostringstream query_stream;
+	query_stream << "INSERT INTO SalesEstimates_order(place_date, order_group_id, items, cost) VALUES";
+	query_stream << "('" << date_str << "'," << og_id << "," << items << "," << cost << ")" << endl;
+	stmt->execute(query_stream.str());
+	query_stream.str("");
+	query_stream.clear();
+	query_stream << "SELECT LAST_INSERT_ID()";
+	res = stmt->executeQuery(query_stream.str()); res->next();
+	int order_id = res->getInt(1);
+	add_count++;
+	delete res;
+	delete stmt;
+	query_stream.str("");
+	query_stream.clear();
+	for(vector<int>::iterator iter = demand_ids.begin(); iter != demand_ids.end(); ++iter) {
+		if (!first_set)
+			query_stream << ",";
+		first_set = false;
+		query_stream << "(" << *iter << "," << order_id << ")";
+	}
+	return query_stream.str();
+}
+
+vector<int> MySQL::_get_order_groups()
+{
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	stmt = con->createStatement();
+	vector<int> order_groups;
+	res = stmt->executeQuery("SELECT id FROM SalesEstimates_ordergroup");
+	while (res->next()) {
+		order_groups.push_back(res->getInt("id"));
+	}
+	return order_groups;
 }
 
 vector<int> MySQL::_get_sales_periods()
@@ -160,7 +223,7 @@ vector<int> MySQL::_get_sales_periods()
 	sql::ResultSet *res;
 	stmt = con->createStatement();
 	vector<int> sales_periods;
-	res = stmt->executeQuery("SELECT id FROM SalesEstimates_salesperiod;");
+	res = stmt->executeQuery("SELECT id FROM SalesEstimates_salesperiod");
 	while (res->next()) {
 		sales_periods.push_back(res->getInt("id"));
 	}
@@ -203,3 +266,18 @@ void print_columns(sql::ResultSet *rs)
 	cout << "\" belongs to the Table: \"" << res_meta -> getTableName(1);
 	cout << "\" which belongs to the Schema: \"" << res_meta -> getSchemaName(1) << "\"" << endl;
 }
+
+string date_string(struct tm start_tm){
+	char buf [200];
+	strftime(buf, sizeof(buf), "%a %d-%m-%Y", &start_tm);//%H:%M %z
+	return string(buf);
+}
+
+string mysql_date_string(struct tm start_tm){
+	char buf [200];
+	strftime(buf, sizeof(buf), "%Y-%m-%d", &start_tm);//%H:%M %z
+	return string(buf);
+}
+
+
+

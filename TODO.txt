@@ -44,9 +44,11 @@
 * add "paste mode" to django-hot
 *DONE edit templates so HOT works with multiple tags in the same page
 
-* user external module for import/export
+* set sales to be double not int
+* use external module for import/export
 * get formsets working properly as in through different class
-* group orders and account for discount (remember minimum order)
+*DONE group orders and account for discount (remember minimum order)
+* get lead time to work properly
 * get formsets working properly in all add/edit pages
 
     
