@@ -9,7 +9,7 @@ string MySQL::connect(string db_name, string user, string password, string conne
 		driver = get_driver_instance();
 		con = driver->connect(connection, user, password);
 		con->setSchema(db_name);
-		out_stream << "Successfully connected to " << connection << " > " << db_name << endl;
+		out_stream << "Successfully connected to " << connection << ":" << db_name << endl;
 	} catch (sql::SQLException &e) {
 		raise_error(e, out_stream, __FUNCTION__);
 	}
@@ -28,12 +28,15 @@ string MySQL::clear_csp()
 		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_skusales;");
 		res->next();
 		out_stream << "Deleting " << res->getInt(1) << " SKU Sales Records" << endl;
-		stmt->execute("DELETE FROM SalesEstimates_skusales;");
+		stmt->execute("DELETE FROM SalesEstimates_skusales");
+		stmt->execute("ALTER TABLE SalesEstimates_skusales AUTO_INCREMENT = 1");
 
 		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_customersalesperiod;");
 		res->next();
 		out_stream << "Deleting " << res->getInt(1) << " Customer Sales Period Records" << endl;
-		stmt->execute("DELETE FROM SalesEstimates_customersalesperiod;");
+		stmt->execute("DELETE FROM SalesEstimates_customersalesperiod");
+		stmt->execute("ALTER TABLE SalesEstimates_customersalesperiod AUTO_INCREMENT = 1");
+
 	} catch (sql::SQLException &e) {
 		raise_error(e, out_stream, __FUNCTION__);
 	}
@@ -228,18 +231,6 @@ string MySQL::generate_skusales()
 	return out_stream.str();
 }
 
-class OrderCollection {
-	// TODO: got to here
-	vector<int> order_levels;
-	vector<double> cost_levels;
-  public:
-	void add_group(int, double);
-
-	void print();
-
-	float get_price(int);
-};
-
 string MySQL::calculate_demand(int combined_periods)
 {
 	ostringstream out_stream;
@@ -247,6 +238,10 @@ string MySQL::calculate_demand(int combined_periods)
 		sql::Statement *stmt;
 		sql::ResultSet *res;
 		stmt = con->createStatement();
+
+		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_demand;");res->next();
+		out_stream << "Deleting " << res->getInt(1) << " Demands" << endl;
+		stmt->execute("TRUNCATE SalesEstimates_demand;");
 
 		ostringstream query_stream;
 		query_stream << "SELECT SKUS.id sku_sales_id, SKUS.sales sales, CSP.period_id period_id, OG.id og_id, AC.count c_count FROM SalesEstimates_skusales SKUS" << endl;
@@ -284,45 +279,50 @@ string MySQL::calculate_demand(int combined_periods)
 				it_skusa->second.og__count.push_back(IntInt(res->getInt("og_id"), res->getInt("c_count")));
 			}
 		}
-		map<int, ComponentOrderGroup>order_group_calcs = _get_order_prices();
-
-		map<IntInt, double> order_prices;
-		for (it = og_total_sales.begin(); it != og_total_sales.end(); ++it) {
-			order_prices[it->first] = order_group_calcs[it->first.second].get_price(it->second);
-		}
-
-		map<int, SalesPeriod> sales_periods = _get_sales_period_dates();
-		int period_number = 1;
-		int start_period = 0;
-		for (map<int, SalesPeriod>::iterator iter = sales_periods.begin(); iter != sales_periods.end(); ++iter) {
-			if (period_number - start_period == combined_periods){
-				// finish orders
-				start_period = period_number + 1;
-			}
-			// TODO: got to here
-			period_number++;
-		}
-
 		query_stream.str("");
 		query_stream.clear();
-		query_stream << "INSERT INTO SalesEstimates_skusales(id, cost) VALUES";
-		first_set = true;
-		double cost;
-		for(map<int, SKUSalesInfo>::iterator skui_it = sku_sales_infos.begin(); skui_it != sku_sales_infos.end(); skui_it++) {
-			if (!first_set)
-				query_stream << ",";
-			first_set = false;
-			cost = 0;
-
-			for(vector<IntInt>::iterator it2 = skui_it->second.og__count.begin(); it2 != skui_it->second.og__count.end(); it2++) {
-			    iorder = IntInt(skui_it->second.period_id, it2->first);
-			    cost += order_prices[iorder] * it2->second;
+		query_stream << "INSERT INTO SalesEstimates_demand(start_period_id, end_period_id, order_group_id, items) VALUES" << endl;
+//		order_group_costs = _get_order_group_costs();
+		vector<int> order_groups = _get_order_groups();
+		sales_periods = _get_sales_period_dates();
+		int index = 1;
+		int start_index = 1;
+		int start_sales_period = 0;
+		int sales_period = 0;
+		map<int, int> og_sales;
+		map<int, int>::iterator int_int_it;
+		bool first_set = true;
+		int add_count = 0;
+		for (map<int, SalesPeriod>::iterator iter = sales_periods.begin(); iter != sales_periods.end(); ++iter) {
+			if (index == start_index){
+				start_sales_period = iter->first;
 			}
-			cost *= skui_it->second.sales;
-			query_stream << "(" << skui_it->first << "," << cost << ")";
+			sales_period = iter->first;
+			if (index - start_index == combined_periods - 1){
+				start_index = index + 1;
+				if (!first_set)
+					query_stream << ",";
+				first_set = false;
+				query_stream << _construct_demand(og_sales, start_sales_period, sales_period, add_count);
+				og_sales.clear();
+			}
+			for(vector<int>::iterator iter2 = order_groups.begin(); iter2 != order_groups.end(); ++iter2) {
+				iorder = IntInt(iter->first, *iter2);
+				it = og_total_sales.find(iorder);
+				if(it != og_total_sales.end())
+				{
+					prev_sales = 0;
+					int_int_it = og_sales.find(*iter2);
+					if(int_int_it != og_sales.end())
+					{ prev_sales = int_int_it->second; }
+					og_sales[*iter2] = prev_sales + it->second;
+				}
+			}
+			index++;
 		}
-		query_stream << endl << "ON DUPLICATE KEY UPDATE cost=VALUES(cost);";
+		query_stream << "," << _construct_demand(og_sales, start_sales_period, sales_period, add_count);
 		stmt->execute(query_stream.str());
+		out_stream << "Added " << add_count << " Demands";
 		delete res;
 		delete stmt;
 	} catch (sql::SQLException &e) {
@@ -331,7 +331,72 @@ string MySQL::calculate_demand(int combined_periods)
 	return out_stream.str();
 }
 
+string MySQL::generate_orders()
+{
+	ostringstream out_stream;
+	try {
+		sql::Statement *stmt;
+		sql::ResultSet *res;
+		stmt = con->createStatement();
 
+		res = stmt->executeQuery("SELECT COUNT(*) FROM SalesEstimates_order");res->next();
+		out_stream << "Deleting " << res->getInt(1) << " Orders" << endl;
+		stmt->execute("DELETE FROM SalesEstimates_order");
+		stmt->execute("ALTER TABLE SalesEstimates_order AUTO_INCREMENT = 1");
+
+		order_group_costs = _get_order_group_costs();
+//		vector<int> order_groups = _get_order_groups();
+		sales_periods = _get_sales_period_dates();
+		ostringstream query_stream;
+		query_stream << "SELECT D.id, D.start_period_id, D.order_group_id, D.items FROM SalesEstimates_demand D" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_salesperiod SP ON D.start_period_id = SP.id" << endl;
+		query_stream << "ORDER BY D.order_group_id, SP.start_date" << endl;
+		res = stmt->executeQuery(query_stream.str());
+
+		query_stream.str("");
+		query_stream.clear();
+		query_stream << "INSERT INTO SalesEstimates_demand(id, order_id) VALUES" << endl;
+		bool first_set = true;
+
+		int add_count = 0;
+		int og_id, items, min_order;
+		int start_period_id = -1;
+		int current_period_id = -1;
+		bool res_next = res->next();
+		vector<int> demand_ids;
+		while (res_next) {
+			og_id = res->getInt("order_group_id");
+			min_order = order_group_costs[og_id].minimum_order;
+			items = 0;
+			demand_ids.clear();
+			while (og_id == res->getInt("order_group_id")) {
+				current_period_id = res->getInt("start_period_id");
+				if (items == 0)
+					start_period_id = current_period_id;
+				items += res->getInt("items");
+				demand_ids.push_back(res->getInt("id"));
+				res_next = res->next();
+				if (!res_next)
+					break;
+				if (items >= min_order && current_period_id != res->getInt("start_period_id")){
+					query_stream << _construct_order(items, start_period_id, og_id, demand_ids, add_count, first_set);
+					demand_ids.clear();
+					items = 0;
+				}
+			}
+			if (items > 0)
+				query_stream << _construct_order(items, start_period_id, og_id, demand_ids, add_count, first_set);
+		}
+		query_stream << endl << "ON DUPLICATE KEY UPDATE order_id=VALUES(order_id)";
+		stmt->execute(query_stream.str());
+		out_stream << "Added " << add_count << " Demands";
+		delete res;
+		delete stmt;
+	} catch (sql::SQLException &e) {
+		raise_error(e, out_stream, __FUNCTION__);
+	}
+	return out_stream.str();
+}
 
 #ifdef PYTHON
 
@@ -344,6 +409,8 @@ BOOST_PYTHON_MODULE(worker)
         .def("add_customer_csp", &MySQL::add_customer_csp)
         .def("update_cust_csp", &MySQL::update_cust_csp)
         .def("generate_skusales", &MySQL::generate_skusales)
+        .def("calculate_demand", &MySQL::calculate_demand)
+        .def("generate_orders", &MySQL::generate_orders)
     ;
 }
 #else

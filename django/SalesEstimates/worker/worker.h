@@ -23,6 +23,8 @@ using namespace boost::python;
 using namespace std;
 void raise_error(sql::SQLException e, ostringstream &stream, string func);
 void print_columns(sql::ResultSet *rs);
+string date_string(struct tm start_tm);
+string mysql_date_string(struct tm start_tm);
 
 typedef pair<struct tm, struct tm> SalesPeriod;
 typedef pair<int, int> IntInt;
@@ -51,6 +53,7 @@ class ComponentOrderGroup {
 	vector<int> order_levels;
 	vector<double> cost_levels;
   public:
+	int minimum_order;
 	void add_group(int, double);
 
 	void print();
@@ -60,12 +63,17 @@ class ComponentOrderGroup {
 
 class MySQL {
 	sql::Connection *con;
+	map<int, ComponentOrderGroup> order_group_costs;
+	map<int, SalesPeriod> sales_periods;
 	vector<int> _get_sales_periods();
 	map<int, SalesPeriod> _get_sales_period_dates();
 	map<IntInt, double> _get_seasonal_vars();
 	map<int, vector<CSKUI>> _get_cskuis();
 	map<int, Promotion> _get_promotions();
-	map<int, OrderGroup> _get_order_prices();
+	map<int, ComponentOrderGroup> _get_order_group_costs();
+	vector<int> _get_order_groups();
+	string _construct_demand(map<int, int>, int, int, int&);
+	string _construct_order(int, int, int, vector<int>, int&, bool&);
   public:
 	string connect(string, string, string, string);
 
@@ -85,6 +93,9 @@ class MySQL {
 	// generate the actual sku sales estimates
 	string generate_skusales();
 
-	// calculate the supply demand associated with sku sales
+	// calculate the demand associated with sku sales
 	string calculate_demand(int);
+
+	// generate orders to satisfy demand
+	string generate_orders();
 };

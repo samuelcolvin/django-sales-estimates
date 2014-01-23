@@ -99,3 +99,18 @@ class SKUSalesAdmin(admin.ModelAdmin):
     
 admin.site.register(m.SKUSales, SKUSalesAdmin)
 
+class DemandInline(admin.TabularInline):
+    model = m.Demand
+    extra = 5
+
+class OrderAdmin(admin.ModelAdmin):
+    inlines = [DemandInline]
+    list_display = ('id', 'place_date', 'order_group', 'demand_count', 'items', 'str_cost')
+    
+admin.site.register(m.Order, OrderAdmin)
+
+class DemandAdmin(admin.ModelAdmin):
+    list_display = ('id', 'str_simple_date', 'order_group', 'items')
+    
+admin.site.register(m.Demand, DemandAdmin)
+    

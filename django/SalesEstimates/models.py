@@ -8,7 +8,7 @@ class BasicModel(models.Model):
     xl_id = models.IntegerField('Excel ID', default=-1, editable=False)
     
     def __unicode__(self):
-        return self.name
+        return '%d: %s' % (self.id, self.name)
     
     class Meta:
         abstract = True
@@ -60,7 +60,7 @@ class CostLevel(models.Model):
         self.order_group.save()
     
     def __unicode__(self):
-        return '%s cost: %s @ %d units' % (self.order_group.name, price_str(self.price), self.order_quantity)
+        return '%d: %s cost: %s @ %d units' % (self.id, self.order_group.name, price_str(self.price), self.order_quantity)
     
     class Meta:
         ordering = ['order_quantity']
@@ -105,7 +105,7 @@ class Assembly(BasicModel):
         return price_str(self.nominal_raw_cost())
     
     def __unicode__(self):
-        return self.name
+        return '%d: %s' % (self.id, self.name)
         
     class Meta:
         verbose_name_plural = 'Assemblies'
@@ -147,7 +147,7 @@ class MonthVariation(models.Model):
     season_var = models.ForeignKey(SeasonalVariation, related_name='months')
     
     def __unicode__(self):
-        return '%s, rate: %0.2f' % (self.get_month_display(), self.srf)
+        return '%d: %s, rate: %0.2f' % (self.id, self.get_month_display(), self.srf)
     
     class Meta:
         unique_together = (('season_var', 'month'),)
@@ -235,7 +235,7 @@ class CustomerSKUInfo(models.Model):
         return price_str(self.price)
         
     def __unicode__(self):
-        return '%s for %s' % (self.sku.name, self.customer.name)
+        return '%d: %s for %s' % (self.id, self.sku.name, self.customer.name)
         
     class Meta:
         unique_together = (('sku', 'customer'),)
@@ -258,6 +258,7 @@ class CustomerSKUInfo(models.Model):
         if editted:
             self.save()
 
+short_date_form = '%d-%b-%y'
 class SalesPeriod(models.Model):
     start_date = models.DateField()
     finish_date = models.DateField()
@@ -265,9 +266,8 @@ class SalesPeriod(models.Model):
     xl_id = models.IntegerField('Excel ID', default=-1)
     
     def str_simple_date(self):
-        form = '%b-%y'
-        return '%s to %s' % (self.start_date.strftime(form),
-                             self.finish_date.strftime(form))
+        return '%s to %s' % (self.start_date.strftime(short_date_form),
+                             self.finish_date.strftime(short_date_form))
     
     def str_start(self):
         return self.start_date.strftime(settings.CUSTOM_DATE_FORMAT)
@@ -279,7 +279,7 @@ class SalesPeriod(models.Model):
         return (self.finish_date - self.start_date).days
     
     def __unicode__(self):
-        return self.str_simple_date()
+        return '%d: %s' % (self.id, self.str_simple_date())
 
     class Meta:
         verbose_name_plural = 'Sales Periods'
@@ -299,7 +299,7 @@ class CustomerSalesPeriod(models.Model):
         s_count = ''
         if self.store_count is not None:
             s_count = '%d stores' % self.store_count
-        return 'period from %s for %s, %s' % (self.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT),
+        return '%d: period from %s for %s, %s' % (self.id, self.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT),
                                                       self.customer.name, s_count)
         
     def save(self, *args, **kwargs):
@@ -321,8 +321,6 @@ class SKUSales(models.Model):
     sales = models.FloatField('Number of SKUs sold', default=0)
     xl_id = models.IntegerField('Excel ID', default=-1)
     income = models.DecimalField('Income from sales', max_digits=11, decimal_places=4, default = 0)
-    # to be removed:
-    cost = models.DecimalField('cost of SKUs sold', max_digits=11, decimal_places=4, default = 0)
     
     def sku_name(self):
         return self.csku.sku_name()
@@ -331,7 +329,7 @@ class SKUSales(models.Model):
         return self.period.period.str_simple_date()
     
     def __unicode__(self):
-        return '%s sells %d at %s in %s' % (self.sku_name(), self.sales, self.csku.customer.name,  
+        return '%d: %s sells %d at %s in %s' % (self.id, self.sku_name(), self.sales, self.csku.customer.name,  
                                             self.period.period.str_simple_date())
     
     class Meta:
@@ -339,18 +337,41 @@ class SKUSales(models.Model):
         verbose_name = 'SKU Sales'
 
 class Order(models.Model):
-    xl_id = models.IntegerField('Excel ID', default=-1)
-    start_period = models.ForeignKey(SalesPeriod, related_name='orders_start')
-    end_period = models.ForeignKey(SalesPeriod, related_name='orders_end')
+    place_date = models.DateField()
     order_group = models.ForeignKey(OrderGroup, related_name='orders')
-    items = models.IntegerField('Number of Components Ordered')
-    cost = models.DecimalField('cost of Components', max_digits=11, decimal_places=4)
-
-    
+    items = models.IntegerField('Number of Components Required')
+    cost = models.DecimalField('Cost of Components', max_digits=11, decimal_places=4)
+     
+    def demand_count(self):
+        return self.demands.count() 
+     
+    def str_cost(self):
+        return price_str(self.cost)
+     
+    def str_place_date(self):
+        return self.place_date.strftime(settings.CUSTOM_DATE_FORMAT)
+     
     def __unicode__(self):
-        return '%s-%s: %d items costing %0.2f' % (self.start_period.str_start(), 
-                                                   self.end_period.str_finish(), self.items, self.cost)
-    
+        return '%d: Order on %s: %d items costing %s' % (self.id, self.str_place_date(), self.items, self.str_cost())
+     
     class Meta:
         verbose_name_plural = 'Orders'
         verbose_name = 'Order'
+ 
+class Demand(models.Model):
+    start_period = models.ForeignKey(SalesPeriod, related_name='demand_start')
+    end_period = models.ForeignKey(SalesPeriod, related_name='demand_end')
+    order_group = models.ForeignKey(OrderGroup, related_name='demands')
+    items = models.IntegerField('Number of Components Required')
+    order = models.ForeignKey(Order, related_name='demands', null=True, blank = True)
+     
+    def str_simple_date(self):
+        return '%s to %s' % (self.start_period.start_date.strftime(short_date_form),
+                             self.end_period.finish_date.strftime(short_date_form))
+     
+    def __unicode__(self):
+        return '%d: %s demands %d items' % (self.id, self.str_simple_date(), self.items)
+     
+    class Meta:
+        verbose_name_plural = 'Demands'
+        verbose_name = 'Demand'
