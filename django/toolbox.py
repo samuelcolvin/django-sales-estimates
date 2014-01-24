@@ -47,7 +47,8 @@ class WorkerFuncs(object):
         processor = imex_m.Process.objects.get(id=id)
         print 'TIME TAKEN: %0.3f' % processor.time_taken
         print 'LOG:\n%s' %  processor.log
-        print 'ERRORS:\n%s' %  processor.errors
+        if processor.errors:
+            print processor.errors
         
     @staticmethod
     def generate_sales_estimates(interactive):
