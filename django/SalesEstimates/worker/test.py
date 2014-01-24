@@ -50,7 +50,7 @@ class TestSequenceFunctions(unittest.TestCase):
 #         self.assertTrue(non_standard_sc == 2)
 
     def test_generate_skus(self):
-#     	print self.mysql.generate_skusales()
+     	print self.mysql.generate_skusales()
         print self.mysql.calculate_demand(settings.DEMAND_GROUPING, settings.GENERAL_LEAD_TIME)
         print self.mysql.generate_orders()
     

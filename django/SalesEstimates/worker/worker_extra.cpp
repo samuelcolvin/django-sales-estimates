@@ -164,34 +164,21 @@ string MySQL::_construct_demand(map<int, DblTimet> og_items_odate, int start_p, 
 	return query_stream.str();
 }
 
-string MySQL::_construct_order(int items, time_t order_date, int start_period_id, int og_id, vector<int> demand_ids, int &add_count, bool &first_set)
+int MySQL::_construct_order(
+					double items,
+					time_t order_date,
+					int og_id,
+					bool &first_set,
+					ostringstream &main_query
+				)
 {
-	sql::Statement *stmt;
-	sql::ResultSet *res;
-	stmt = con->createStatement();
-	double cost = order_group_costs[og_id].get_price(items) * (double)items;
+	double cost = order_group_costs[og_id].get_price(items) * items;
 	string date_str = mysql_date_string(date_tm(order_date));
-	ostringstream query_stream;
-	query_stream << "INSERT INTO SalesEstimates_order(place_date, order_group_id, items, cost) VALUES";
-	query_stream << "('" << date_str << "'," << og_id << "," << items << "," << cost << ")" << endl;
-	stmt->execute(query_stream.str());
-	query_stream.str("");
-	query_stream.clear();
-	query_stream << "SELECT LAST_INSERT_ID()";
-	res = stmt->executeQuery(query_stream.str()); res->next();
-	int order_id = res->getInt(1);
-	add_count++;
-	delete res;
-	delete stmt;
-	query_stream.str("");
-	query_stream.clear();
-	for(vector<int>::iterator iter = demand_ids.begin(); iter != demand_ids.end(); ++iter) {
-		if (!first_set)
-			query_stream << ",";
-		first_set = false;
-		query_stream << "(" << *iter << "," << order_id << ")";
-	}
-	return query_stream.str();
+	if (!first_set)
+		main_query << ",";
+	first_set = false;
+	main_query << "('" << date_str << "'," << og_id << "," << items << "," << cost << ")";
+	return 0;
 }
 
 vector<int> MySQL::_get_order_groups()

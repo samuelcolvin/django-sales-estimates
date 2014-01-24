@@ -83,7 +83,7 @@ class MySQL {
 	map<int, ComponentOrderGroup> _get_order_group_costs();
 	vector<int> _get_order_groups();
 	string _construct_demand(map<int, DblTimet>, int, int, int&);
-	string _construct_order(int, time_t, int, int, vector<int>, int&, bool&);
+	int _construct_order(double, time_t, int, bool&, ostringstream&);
   public:
 	string connect(string, string, string, string);
 
