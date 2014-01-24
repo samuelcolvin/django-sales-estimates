@@ -60,6 +60,8 @@ def generate_skusales(log):
     start = time()
     mysql, msgs = _get_con()
     msgs += mysql.generate_skusales()
+    msgs += mysql.calculate_demand(settings.DEMAND_GROUPING, settings.GENERAL_LEAD_TIME)
+    msgs += mysql.generate_orders()
     print msgs
     [log(msg) for msg in msgs.split('\n')]
     log('Time taken: %0.3f seconds' % (time() - start))

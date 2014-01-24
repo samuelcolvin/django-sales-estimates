@@ -2,7 +2,6 @@ import ExcelImportExport
 import models as m
 import openpyxl
 from django.db import models as db_models
-import SalesEstimates.worker
         
 class Manufacturer(ExcelImportExport.ImExBase):
     imex_fields = ExcelImportExport.default_imex_fields
@@ -72,20 +71,7 @@ class Component(ExcelImportExport.ImExBase):
 class Assembly(ExcelImportExport.ImExBase):
     imex_fields = ExcelImportExport.default_imex_fields + ['size']
     imex_order = 2
-    model = m.Assembly
-    
-#     class ImportExtra(ExcelImportExport.ImportM2MBase):
-#         def __init__(self, *args, **kwargs):
-#             self._m2m_field_name = 'components'
-#             ExcelImportExport.ImportM2MBase.__init__(self, *args, **kwargs)
-#     
-#     class ExportExtra(ExcelImportExport.M2MExport):
-#         def __init__(self, *args, **kwargs):
-#             self._m2m_field_name = 'components'
-#             self._main_model = m.Assembly
-#             self._lookups = [{'heading': '', 'sheet': 'Component'}]
-#             ExcelImportExport.M2MExport.__init__(self, *args, **kwargs)
-    
+    model = m.Assembly    
     
 class AssyComponent(ExcelImportExport.ImExBase):
     imex_fields = ['xl_id', 'assembly', 'component', 'count']

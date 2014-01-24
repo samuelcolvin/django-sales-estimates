@@ -23,7 +23,6 @@ class OrderGroup(BasicModel):
     nominal_price = models.DecimalField('Nominal price per unit', max_digits=11, decimal_places=4, null=True, blank=True)
     minimum_order = models.IntegerField(default=0)
     manufacturer = models.ForeignKey(Manufacturer, related_name='order_group')
-    delivery_lead_time = models.IntegerField(default = 0)
     
     def cost(self, orders):
         costlevels_avail = self.costlevels.filter(order_quantity__lte = orders)
