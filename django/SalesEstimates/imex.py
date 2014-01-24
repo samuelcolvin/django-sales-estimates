@@ -1,25 +1,25 @@
-import ExcelImportExport
+import Imex
 import models as m
 import openpyxl
 from django.db import models as db_models
         
-class Manufacturer(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields
+class Manufacturer(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields
     imex_order = 0
-    model = m.Manufacturer
+    main_model = m.Manufacturer
 
-class OrderGroup(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields + ['minimum_order', 'manufacturer']
+class OrderGroup(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields + ['minimum_order', 'manufacturer']
     imex_order = 0
-    model = m.OrderGroup
+    main_model = m.OrderGroup
         
-    class ImportExtra(ExcelImportExport.ImportExtra):
+    class ImportExtra(Imex.ImportExtra):
         def __init__(self, ws, headings):
             cl_heads = filter(lambda x: x.startswith('costlevels'), headings.keys())
             self._CL_heads = {}
             for cl_head in cl_heads:
                 self._CL_heads[cl_head] = int(cl_head.replace('costlevels', ''))
-            ExcelImportExport.ImportExtra.__init__(self, ws, headings)
+            Imex.ImportExtra.__init__(self, ws, headings)
         
         def get_row(self, order_group, row):
             for cl_head in self._CL_heads:
@@ -57,44 +57,44 @@ class OrderGroup(ExcelImportExport.ImExBase):
             seen_add = seen.add
             return sorted([ x for x in all_levels if x not in seen and not seen_add(x)])
         
-class Component(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields + ['supply_lead_time', 'order_group']
+class Component(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields + ['supply_lead_time', 'order_group']
     imex_order = 1
-    model = m.Component
+    main_model = m.Component
     
-    class ExportExtra(ExcelImportExport.RedExtra):
+    class ExportExtra(Imex.RedExtra):
         def __init__(self, *args, **kwargs):
-            self._lookups = [{'heading': 'Order Group Name', 'sheet': 'OrderGroup', 
+            self.lookups = [{'heading': 'Order Group Name', 'sheet': 'OrderGroup', 
                               'ref_col': Component.imex_fields.index('order_group')}]
-            ExcelImportExport.RedExtra.__init__(self, *args, **kwargs)
+            Imex.RedExtra.__init__(self, *args, **kwargs)
     
-class Assembly(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields + ['assembly_lead_time', 'size']
+class Assembly(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields + ['assembly_lead_time', 'size']
     imex_order = 2
-    model = m.Assembly    
+    main_model = m.Assembly    
     
-class AssyComponent(ExcelImportExport.ImExBase):
+class AssyComponent(Imex.ImExBase):
     imex_fields = ['xl_id', 'count', 'assembly', 'component']
     imex_order = 2.25
-    model = m.AssyComponent
+    main_model = m.AssyComponent
         
-class SKUGroup(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields
+class SKUGroup(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields
     imex_order = 2.5
-    model = m.SKUGroup
+    main_model = m.SKUGroup
 
-class SeasonalVariation(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields
+class SeasonalVariation(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields
     imex_order = 2.75
-    model = m.SeasonalVariation
+    main_model = m.SeasonalVariation
         
-    class ImportExtra(ExcelImportExport.ImportExtra):
+    class ImportExtra(Imex.ImportExtra):
         def __init__(self, ws, headings):
             month_heads = filter(lambda x: x.startswith('month'), headings.keys())
             self._month_heads = {}
             for month_head in month_heads:
                 self._month_heads[month_head] = int(month_head.replace('month', ''))
-            ExcelImportExport.ImportExtra.__init__(self, ws, headings)
+            Imex.ImportExtra.__init__(self, ws, headings)
         
         def get_row(self, season_var, row):
             for month_head, month in self._month_heads.items():
@@ -125,99 +125,97 @@ class SeasonalVariation(ExcelImportExport.ImExBase):
                 c = self._ws.cell(row = row, column=self._columns[month_var.month])
                 c.value = month_var.srf
     
-class SKU(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields + ['dft_price', 'dft_srf', 'dft_season_var', 'group']
+class SKU(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields + ['dft_price', 'dft_srf', 'dft_season_var', 'group']
     imex_order = 3
-    model = m.SKU
+    main_model = m.SKU
     
-    class ImportExtra(ExcelImportExport.ImportM2MBase):
-        def __init__(self, *args, **kwargs):
-            self._m2m_field_name = 'assemblies'
-            ExcelImportExport.ImportM2MBase.__init__(self, *args, **kwargs)
+    class ImportExtra(Imex.ImportM2MBase):
+        m2m_field_name = 'assemblies'
     
-    class ExportExtra(ExcelImportExport.M2MExport):
+    class ExportExtra(Imex.M2MExport):
+        m2m_field_name = 'assemblies'
+        main_model = m.SKU
+        m2m_lookup_sheet = 'Assembly'
         def __init__(self, *args, **kwargs):
-            self._m2m_field_name = 'assemblies'
-            self._main_model = m.SKU
-            self._lookups = [{'heading': '', 'sheet': 'Assembly'}, 
+            self.lookups = [{'heading': '', 'sheet': 'Assembly'}, 
                              {'heading': 'Group', 'sheet': 'SKUGroup', 
                               'ref_col': SKU.imex_fields.index('group')}]
-            ExcelImportExport.M2MExport.__init__(self, *args, **kwargs)
+            Imex.M2MExport.__init__(self, *args, **kwargs)
 
-class Promotion(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields + ['srf', 'price_ratio']
+class Promotion(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields + ['srf', 'price_ratio']
     imex_order = 3.5
-    model = m.Promotion
+    main_model = m.Promotion
     
-    class ImportExtra(ExcelImportExport.ImportM2MBase):
-        def __init__(self, *args, **kwargs):
-            self._m2m_field_name = 'skus'
-            ExcelImportExport.ImportM2MBase.__init__(self, *args, **kwargs)
+    class ImportExtra(Imex.ImportM2MBase):
+        m2m_field_name = 'skus'
     
-    class ExportExtra(ExcelImportExport.M2MExport):
+    class ExportExtra(Imex.M2MExport):
+        m2m_field_name = 'skus'
+        main_model = m.Promotion
+        m2m_lookup_sheet = 'SKU'
         def __init__(self, *args, **kwargs):
-            self._m2m_field_name = 'skus'
-            self._main_model = m.Promotion
-            self._lookups = [{'heading': '', 'sheet': 'SKU'}]
-            ExcelImportExport.M2MExport.__init__(self, *args, **kwargs)
+            self.lookups = [{'heading': '', 'sheet': 'SKU'}]
+            Imex.M2MExport.__init__(self, *args, **kwargs)
 
-class Customer(ExcelImportExport.ImExBase):
-    imex_fields = ExcelImportExport.default_imex_fields + ['dft_srf', 'dft_store_count', 'delivery_lead_time']
+class Customer(Imex.ImExBase):
+    imex_fields = Imex.default_imex_fields + ['dft_srf', 'dft_store_count', 'delivery_lead_time']
     imex_order = 4
-    model = m.Customer
+    main_model = m.Customer
                 
-class CustomerSKUInfo(ExcelImportExport.ImExBase):
+class CustomerSKUInfo(Imex.ImExBase):
     imex_fields = ['xl_id', 'sku', 'customer', 'price', 'srf', 'custom_srf', 'season_var']
     imex_order = 5
-    model = m.CustomerSKUInfo
+    main_model = m.CustomerSKUInfo
     
-    class ExportExtra(ExcelImportExport.RedExtra):
+    class ExportExtra(Imex.RedExtra):
         def __init__(self, *args, **kwargs):
-            self._lookups = [{'heading': 'SKU Name', 'sheet': 'SKU', 
+            self.lookups = [{'heading': 'SKU Name', 'sheet': 'SKU', 
                               'ref_col': CustomerSKUInfo.imex_fields.index('sku')},
                              {'heading': 'Customer Name', 'sheet': 'Customer', 
                               'ref_col': CustomerSKUInfo.imex_fields.index('customer')},
                              {'heading': 'Seasonal Variation', 'sheet': 'SeasonalVariation', 
                               'ref_col': CustomerSKUInfo.imex_fields.index('season_var')},]
-            ExcelImportExport.RedExtra.__init__(self, *args, **kwargs)
+            Imex.RedExtra.__init__(self, *args, **kwargs)
     
-class SalesPeriod(ExcelImportExport.ImExBase):
+class SalesPeriod(Imex.ImExBase):
     imex_fields = ['xl_id']
     imex_order = 6
     import_sheet = False
-    model = m.SalesPeriod
+    main_model = m.SalesPeriod
             
-    class ExportExtra(ExcelImportExport.RedExtra):
+    class ExportExtra(Imex.RedExtra):
         def __init__(self, ws, firstcol):
-            self._lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
-            ExcelImportExport.RedExtra.__init__(self, ws, firstcol)
+            self.lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
+            Imex.RedExtra.__init__(self, ws, firstcol)
 
-class CustomerSalesPeriod(ExcelImportExport.ImExBase):
+class CustomerSalesPeriod(Imex.ImExBase):
     imex_fields = ['xl_id', 'customer', 'period', 'store_count', 'custom_store_count', 'promotion']
     imex_order = 7
-    model = m.CustomerSalesPeriod
+    main_model = m.CustomerSalesPeriod
     
-    class ExportExtra(ExcelImportExport.RedExtra):
+    class ExportExtra(Imex.RedExtra):
         def __init__(self, *args, **kwargs):
-            self._lookups = [{'heading': 'Customer', 'sheet': 'Customer', 
+            self.lookups = [{'heading': 'Customer', 'sheet': 'Customer', 
                               'ref_col': CustomerSalesPeriod.imex_fields.index('customer')}]
-            ExcelImportExport.RedExtra.__init__(self, *args, **kwargs)
+            Imex.RedExtra.__init__(self, *args, **kwargs)
     
-# class ResultsBySKU(ExcelImportExport.ImExBase):
+# class ResultsBySKU(Imex.ImExBase):
 #     imex_fields = ['xl_id']
 #     imex_order = 8
-#     model = m.SalesPeriod
+#     main_model = m.SalesPeriod
 #     import_sheet = False
 #     imex_top_offset = 1
 #     
-#     class ExportExtra(ExcelImportExport.RedExtra):
+#     class ExportExtra(Imex.RedExtra):
 #         def __init__(self, *args, **kwargs):
-#             self._lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
-#             ExcelImportExport.RedExtra.__init__(self, *args, **kwargs)
+#             self.lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
+#             Imex.RedExtra.__init__(self, *args, **kwargs)
 #                  
 #         def add_headings(self, row):
 #             skus = m.SKU.objects.all().values_list('name', flat=True)
-#             self._columns = [(i*3 + self._firstcol + len(self._lookups), c) for (i, c) in enumerate(skus)]
+#             self._columns = [(i*3 + self._firstcol + len(self.lookups), c) for (i, c) in enumerate(skus)]
 #             for (col, sku) in self._columns:
 #                 self._set_left_border(self._add_bold(0, col, sku))
 #                 self._ws.merge_cells(start_row=0, start_column=col, end_row=0, end_column=col+2)
@@ -228,7 +226,7 @@ class CustomerSalesPeriod(ExcelImportExport.ImExBase):
 #             for (col, sku) in self._columns:
 #                 self._columns_dict[sku]= col
 #             self._add_bold(0, 0, 'Sales Estimates').style.font.size = 14
-#             ExcelImportExport.RedExtra.add_headings(self, 1)
+#             Imex.RedExtra.add_headings(self, 1)
 #             self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
 #             self._set_bottom_border(self._ws.cell(row = 1, column = 0))
 #             self._set_bottom_border(self._ws.cell(row = 1, column = 1))
@@ -245,7 +243,7 @@ class CustomerSalesPeriod(ExcelImportExport.ImExBase):
 #                 self._ws.cell(row = row, column=col).value = info['sales']
 #                 self._ws.cell(row = row, column=col + 1).value = info['cost']
 #                 self._ws.cell(row = row, column=col + 2).value = info['income']
-#             ExcelImportExport.RedExtra.add_row(self, sales_period, row)
+#             Imex.RedExtra.add_row(self, sales_period, row)
 #          
 #         def _add_bold(self, row, col, value):
 #             c = self._ws.cell(row = row, column=col)
@@ -264,21 +262,21 @@ class CustomerSalesPeriod(ExcelImportExport.ImExBase):
 #         def _set_red(self, cell):
 #             pass
 #     
-# class ResultsByCustomer(ExcelImportExport.ImExBase):
+# class ResultsByCustomer(Imex.ImExBase):
 #     imex_fields = ['xl_id']
 #     imex_order = 7
-#     model = m.SalesPeriod
+#     main_model = m.SalesPeriod
 #     import_sheet = False
 #     imex_top_offset = 1
 #     
-#     class ExportExtra(ExcelImportExport.RedExtra):
+#     class ExportExtra(Imex.RedExtra):
 #         def __init__(self, *args, **kwargs):
-#             self._lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
-#             ExcelImportExport.RedExtra.__init__(self, *args, **kwargs)
+#             self.lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
+#             Imex.RedExtra.__init__(self, *args, **kwargs)
 #         
 #         def add_headings(self, row):
 #             customers = m.Customer.objects.all().values_list('name', flat=True)
-#             self._columns = [(i*4 + self._firstcol + len(self._lookups), c) for (i, c) in enumerate(customers)]
+#             self._columns = [(i*4 + self._firstcol + len(self.lookups), c) for (i, c) in enumerate(customers)]
 #             for (col, customer) in self._columns:
 #                 self._set_left_border(self._add_bold(0, col, customer))
 #                 self._ws.merge_cells(start_row=0, start_column=col, end_row=0, end_column=col+3)
@@ -290,7 +288,7 @@ class CustomerSalesPeriod(ExcelImportExport.ImExBase):
 #             for (col, customer) in self._columns:
 #                 self._columns_dict[customer]= col
 #             self._add_bold(0, 0, 'Sales Estimates').style.font.size = 14
-#             ExcelImportExport.RedExtra.add_headings(self, 1)
+#             Imex.RedExtra.add_headings(self, 1)
 #             self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
 #             self._set_bottom_border(self._ws.cell(row = 1, column = 0))
 #             self._set_bottom_border(self._ws.cell(row = 1, column = 1))
@@ -308,7 +306,7 @@ class CustomerSalesPeriod(ExcelImportExport.ImExBase):
 #                 self._ws.cell(row = row, column=col + 1).value = info['sales']
 #                 self._ws.cell(row = row, column=col + 2).value = info['cost']
 #                 self._ws.cell(row = row, column=col + 3).value = info['income']
-#             ExcelImportExport.RedExtra.add_row(self, sales_period, row)
+#             Imex.RedExtra.add_row(self, sales_period, row)
 #          
 #         def _add_bold(self, row, col, value):
 #             c = self._ws.cell(row = row, column=col)
