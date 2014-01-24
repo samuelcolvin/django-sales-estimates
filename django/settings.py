@@ -143,7 +143,7 @@ INSTALLED_APPS = (
     'HotDjango',
     'SkeletalDisplay',
     'SalesEstimates',
-    'ExcelImportExport',
+    'Imex',
     'django_extensions',
     'south'
 )
