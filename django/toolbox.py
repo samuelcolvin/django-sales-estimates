@@ -2,8 +2,9 @@
 import os, sys
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 import SalesEstimates.worker as worker
-import ExcelImportExport.ImportExport as ImportExport
+import Imex.tasks as imex
 import SalesEstimates.models as m
+import Imex.models as imex_m
 import pprint
 
 def log(line):
@@ -25,6 +26,7 @@ class WorkerFuncs(object):
 #     def populate_sales_periods(interactive):
 #         worker.populate_sales_periods(WorkerFuncs._print)
         
+    # TODO: this all needs fixing to work with the new imex app
     @staticmethod
     def import_from_xl(interactive):
         fname = 'CF sales estimates generated.xlsx'
@@ -39,7 +41,13 @@ class WorkerFuncs(object):
         
     @staticmethod
     def export_to_xl(interactive):
-        pprint.pprint(ImportExport.perform_export(log))
+        processor = imex_m.Process.objects.create(action='EX')
+        id = processor.id
+        imex.perform_export(id)
+        processor = imex_m.Process.objects.get(id=id)
+        print 'TIME TAKEN: %0.3f' % processor.time_taken
+        print 'LOG:\n%s' %  processor.log
+        print 'ERRORS:\n%s' %  processor.errors
         
     @staticmethod
     def generate_sales_estimates(interactive):

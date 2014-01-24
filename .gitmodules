@@ -4,3 +4,6 @@
 [submodule "django/SkeletalDisplay"]
 	path = django/SkeletalDisplay
 	url = https://github.com/samuelcolvin/django-skeletal-display.git
+[submodule "django/Imex"]
+	path = django/Imex
+	url = https://github.com/samuelcolvin/django-importexport.git
