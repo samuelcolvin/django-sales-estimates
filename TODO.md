@@ -43,13 +43,12 @@
 * use numeral.js for formatting values in display page
 * add "paste mode" to django-hot
 * DONE edit templates so HOT works with multiple tags in the same page
-
 * DONE set sales to be double not int
 * DONE use external module for import/export
 * fix and test Imex
 * DONE group orders and account for discount (remember minimum order)
 * DONE get lead time to work properly
-* get formsets working properly in all add/edit pages
+* get formsets working properly in all add/edit pages - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
 
 problem with calculating orders/lead times - if demand is based on order group assembly and customer are not 
 known therefore can't calculate lead time based on them
