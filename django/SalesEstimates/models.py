@@ -264,7 +264,7 @@ short_date_form = '%d-%b-%y'
 class SalesPeriod(models.Model):
     start_date = models.DateField()
     finish_date = models.DateField()
-    customers = models.ManyToManyField(Customer, related_name='sales_periods', through='CustomerSalesPeriod')
+    #customers = models.ManyToManyField(Customer, related_name='sales_periods', through='CustomerSalesPeriod')
     xl_id = models.IntegerField('Excel ID', default=-1)
     
     def str_simple_date(self):
@@ -288,6 +288,7 @@ class SalesPeriod(models.Model):
         verbose_name = 'Sales Period'
         
 class CustomerSalesPeriod(models.Model):
+    xl_id = models.IntegerField('Excel ID', default=-1)
     customer = models.ForeignKey(Customer, related_name='c_sales_periods')
     period = models.ForeignKey(SalesPeriod, related_name='c_sales_periods')
     store_count = models.IntegerField(null = True)

@@ -6,6 +6,9 @@ import ExcelImportExport.ImportExport as ImportExport
 import SalesEstimates.models as m
 import pprint
 
+def log(line):
+    print line
+
 class WorkerFuncs(object):
     @staticmethod
     def create_sales_periods(interactive):
@@ -36,7 +39,7 @@ class WorkerFuncs(object):
         
     @staticmethod
     def export_to_xl(interactive):
-        pprint.pprint(ImportExport.perform_export())
+        pprint.pprint(ImportExport.perform_export(log))
         
     @staticmethod
     def generate_sales_estimates(interactive):
