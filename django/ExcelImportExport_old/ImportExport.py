@@ -8,6 +8,7 @@ from django.core.files import File
 import ExcelImportExport.models
 import settings, os
 import SkeletalDisplay
+from time import time
 
 def perform_export(add_line):
     tmp_fname = 'tmp.xlsx'
@@ -173,7 +174,9 @@ class WriteXl(_ImportExport):
         try:
             for export_model in export_models:
                 self._log('Exporting data to %s' % export_model.__name__)
-                self._write_model(export_model)
+                start = time()
+                export_count = self._write_model(export_model)
+                self._log('    Exported %d items in %0.3fs' % (export_count, (time()-start)))
 #             self._write_model(m.SalesPeriod, 'Sales Figures', self.OutputSheet, [])
         except Exception:
             tb = traceback.format_exc().strip('\r\n')
@@ -220,6 +223,7 @@ class WriteXl(_ImportExport):
                     item.save()
                 ws.cell(row = self._row, column=col).value = value
             exportextra.add_row(item, self._row)
+        return item_id
                 
     def _delete_excess_sheets(self):
         for sheet_name in self._wb.get_sheet_names():
