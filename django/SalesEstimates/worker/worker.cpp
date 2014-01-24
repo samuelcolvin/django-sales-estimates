@@ -375,13 +375,12 @@ string MySQL::generate_orders()
 
 		query_stream.str("");
 		query_stream.clear();
-		query_stream << "INSERT INTO SalesEstimates_demand(id, order_id) VALUES" << endl;
+		query_stream << "INSERT INTO SalesEstimates_order(place_date, order_group_id, items, cost) VALUES" << endl;
 		bool first_set = true;
+		vector<vector<int>> demand_id_groups;
 
-		int add_count = 0;
 		double items;
 		int og_id, min_order;
-		int start_period_id = -1;
 		int current_period_id = -1;
 		bool res_next = res->next();
 		time_t earliest_orderdate = 0;
@@ -396,7 +395,6 @@ string MySQL::generate_orders()
 			while (og_id == res->getInt("order_group_id")) {
 				current_period_id = res->getInt("start_period_id");
 				if (items == 0){
-					start_period_id = current_period_id;
 					earliest_orderdate = date_from_mysql(res->getString("required_date"), &datetime);
 				} else {
 					this_orderdate = date_from_mysql(res->getString("required_date"), &datetime);
@@ -409,16 +407,40 @@ string MySQL::generate_orders()
 				if (!res_next)
 					break;
 				if (items >= min_order && current_period_id != res->getInt("start_period_id")){
-					query_stream << _construct_order(items, earliest_orderdate, start_period_id, og_id, demand_ids, add_count, first_set);
+					_construct_order(items, earliest_orderdate, og_id, first_set, query_stream);
+					demand_id_groups.push_back(demand_ids);
 					demand_ids.clear();
 					items = 0;
 				}
 			}
-			if (items > 0)
-				query_stream << _construct_order(items, earliest_orderdate, start_period_id, og_id, demand_ids, add_count, first_set);
+			if (items > 0){
+				_construct_order(items, earliest_orderdate, og_id, first_set, query_stream);
+				demand_id_groups.push_back(demand_ids);
+			}
+		}
+		stmt->execute(query_stream.str());
+		res = stmt->executeQuery("SELECT LAST_INSERT_ID()"); res->next();
+		int first_insert = res->getInt(1);
+		map<int, vector<int>> order__demand_ids;
+		int add_count = demand_id_groups.size();
+
+		query_stream.str("");
+		query_stream.clear();
+		query_stream << "INSERT INTO SalesEstimates_demand(id, order_id) VALUES" << endl;
+		first_set = true;
+		int order_id;
+		for(int viter = 0; viter != add_count; viter++) {
+			order_id = first_insert + viter;
+			for(vector<int>::iterator viter2 = demand_id_groups[viter].begin(); viter2 != demand_id_groups[viter].end(); ++viter2) {
+				if (!first_set)
+					query_stream << ",";
+				first_set = false;
+				query_stream << "(" << *viter2 << "," << order_id << ")";
+			}
 		}
 		query_stream << endl << "ON DUPLICATE KEY UPDATE order_id=VALUES(order_id)";
 		stmt->execute(query_stream.str());
+
 		out_stream << "Added " << add_count << " Orders";
 		delete res;
 		delete stmt;
@@ -427,6 +449,17 @@ string MySQL::generate_orders()
 	}
 	return out_stream.str();
 }
+
+//int MySQL::_construct_order(
+//					int items,
+//					time_t order_date,
+//					int start_period_id,
+//					int og_id,
+//					vector<int> demand_ids,
+//					int &add_count,
+//					bool &first_set,
+//					ostringstream &main_query
+//				)
 
 string MySQL::test_date_arith()
 {
