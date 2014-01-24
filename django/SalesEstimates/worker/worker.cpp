@@ -165,7 +165,7 @@ string MySQL::generate_skusales()
 		out_stream << "Deleting " << res->getInt(1) << " SKU Sales Estimates" << endl;
 		stmt->execute("TRUNCATE SalesEstimates_skusales;");
 
-		map<int, SalesPeriod> sales_periods = _get_sales_period_dates();
+		sales_periods = _get_sales_period_dates();
 		map<IntInt, double> seasonal_vars = _get_seasonal_vars();
 		map<IntInt, double>::iterator it_db;
 
@@ -231,7 +231,7 @@ string MySQL::generate_skusales()
 	return out_stream.str();
 }
 
-string MySQL::calculate_demand(int combined_periods)
+string MySQL::calculate_demand(int combined_periods, int general_lead_time)
 {
 	ostringstream out_stream;
 	try {
@@ -244,83 +244,104 @@ string MySQL::calculate_demand(int combined_periods)
 		stmt->execute("TRUNCATE SalesEstimates_demand;");
 
 		ostringstream query_stream;
-		query_stream << "SELECT SKUS.id sku_sales_id, SKUS.sales sales, CSP.period_id period_id, OG.id og_id, AC.count c_count FROM SalesEstimates_skusales SKUS" << endl;
+		query_stream << "SELECT SKUS.id sku_sales_id, SKUS.sales sales, CSP.period_id period_id, OG.id og_id, AC.count c_count, ";
+		query_stream << "CUST.delivery_lead_time cust_lt, ASSY.assembly_lead_time assy_lt, COMP.supply_lead_time comp_lt ";
+		query_stream << "FROM SalesEstimates_skusales SKUS" << endl;
 		query_stream << "LEFT JOIN SalesEstimates_customersalesperiod CSP ON SKUS.period_id = CSP.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_customer CUST ON CSP.customer_id = CUST.id" << endl;
 		query_stream << "LEFT JOIN SalesEstimates_customerskuinfo ON SKUS.csku_id = SalesEstimates_customerskuinfo.id" << endl;
 		query_stream << "LEFT JOIN SalesEstimates_sku ON SalesEstimates_customerskuinfo.sku_id = SalesEstimates_sku.id" << endl;
 		query_stream << "LEFT JOIN SalesEstimates_sku_assemblies ON SalesEstimates_sku.id = SalesEstimates_sku_assemblies.sku_id" << endl;
-		query_stream << "LEFT JOIN SalesEstimates_assembly ON SalesEstimates_sku_assemblies.assembly_id = SalesEstimates_assembly.id" << endl;
-		query_stream << "LEFT JOIN SalesEstimates_assycomponent AC ON SalesEstimates_assembly.id = AC.assembly_id" << endl;
-		query_stream << "LEFT JOIN SalesEstimates_component ON AC.component_id = SalesEstimates_component.id" << endl;
-		query_stream << "LEFT JOIN SalesEstimates_ordergroup OG ON SalesEstimates_component.order_group_id = OG.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_assembly ASSY ON SalesEstimates_sku_assemblies.assembly_id = ASSY.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_assycomponent AC ON ASSY.id = AC.assembly_id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_component COMP ON AC.component_id = COMP.id" << endl;
+		query_stream << "LEFT JOIN SalesEstimates_ordergroup OG ON COMP.order_group_id = OG.id" << endl;
 		query_stream << "ORDER BY sku_sales_id";
+//		cout << query_stream.str() << endl;
 		res = stmt->executeQuery(query_stream.str());
 
-		map<IntInt, int> og_total_sales;
-		map<IntInt, int>::iterator it;
+		// TODO: change second int to a structure/pair containing lead time as well as sales
+		map<IntInt, OGSPDemand> og_sp_demand;
+		map<IntInt, OGSPDemand>::iterator it_ogspd;
 		IntInt iorder;
-		int prev_sales, sk_sales_id;
-
-		map<int, SKUSalesInfo> sku_sales_infos;
-		map<int, SKUSalesInfo>::iterator it_skusa;
+		double items;
+		int cust_lt, assy_lt, comp_lt;
 
 		while (res->next()) {
 			iorder = IntInt(res->getInt("period_id"), res->getInt("og_id"));
-			prev_sales = 0;
-			it = og_total_sales.find(iorder);
-			if(it != og_total_sales.end())
-			{ prev_sales = it->second; }
-			og_total_sales[iorder] = prev_sales + res->getInt("sales") * res->getInt("c_count");
-			sk_sales_id = res->getInt("sku_sales_id");
-			it_skusa = sku_sales_infos.find(sk_sales_id);
-			if (it_skusa == sku_sales_infos.end()){
-				sku_sales_infos[sk_sales_id] = {res->getInt("period_id"), res->getInt("sales"), {IntInt(res->getInt("og_id"), res->getInt("c_count"))}};
-			} else{
-				it_skusa->second.og__count.push_back(IntInt(res->getInt("og_id"), res->getInt("c_count")));
+			items = res->getDouble("sales") * (double)res->getInt("c_count");
+			cust_lt = res->getInt("cust_lt");
+			assy_lt = res->getInt("assy_lt");
+			comp_lt = res->getInt("comp_lt");
+			it_ogspd = og_sp_demand.find(iorder);
+			if(it_ogspd != og_sp_demand.end())
+			{
+				it_ogspd->second.items +=  items;
+				it_ogspd->second.cust_lt = cust_lt > it_ogspd->second.cust_lt ? cust_lt : it_ogspd->second.cust_lt;
+				it_ogspd->second.assy_lt = assy_lt > it_ogspd->second.assy_lt ? assy_lt : it_ogspd->second.assy_lt;
+				it_ogspd->second.cust_lt = comp_lt > it_ogspd->second.comp_lt ? comp_lt : it_ogspd->second.comp_lt;
+			}
+			else{
+				og_sp_demand[iorder] = {
+					items,
+					cust_lt,
+					assy_lt,
+					comp_lt,
+				};
 			}
 		}
 		query_stream.str("");
 		query_stream.clear();
-		query_stream << "INSERT INTO SalesEstimates_demand(start_period_id, end_period_id, order_group_id, items) VALUES" << endl;
-//		order_group_costs = _get_order_group_costs();
+		query_stream << "INSERT INTO SalesEstimates_demand(start_period_id, end_period_id, order_group_id, items, required_date, lead_time_total) VALUES" << endl;
 		vector<int> order_groups = _get_order_groups();
 		sales_periods = _get_sales_period_dates();
 		int index = 1;
 		int start_index = 1;
 		int start_sales_period = 0;
-		int sales_period = 0;
-		map<int, int> og_sales;
-		map<int, int>::iterator int_int_it;
+		int sales_period_id = 0;
+		map<int, DblTimet> og_items_odate;
+		map<int, int> og_component;
+		map<int, DblTimet>::iterator int_dbl_t;
+		time_t earliest_order_date;
+		int lead_days;
 		bool first_set = true;
 		int add_count = 0;
-		for (map<int, SalesPeriod>::iterator iter = sales_periods.begin(); iter != sales_periods.end(); ++iter) {
+		for (map<int, SalesPeriod>::iterator it_sp = sales_periods.begin(); it_sp != sales_periods.end(); ++it_sp) {
+			sales_period_id = it_sp->first;
 			if (index == start_index){
-				start_sales_period = iter->first;
+				start_sales_period = sales_period_id;
 			}
-			sales_period = iter->first;
+			for(vector<int>::iterator it_og = order_groups.begin(); it_og != order_groups.end(); ++it_og) {
+				iorder = IntInt(sales_period_id, *it_og);
+				it_ogspd = og_sp_demand.find(iorder);
+				if(it_ogspd != og_sp_demand.end())
+				{
+					lead_days = general_lead_time + it_ogspd->second.cust_lt + it_ogspd->second.assy_lt + it_ogspd->second.comp_lt;
+					earliest_order_date = sub_days(sales_periods[sales_period_id].first, lead_days);
+					int_dbl_t = og_items_odate.find(*it_og);
+					if(int_dbl_t != og_items_odate.end())
+					{
+						int_dbl_t->second.items += it_ogspd->second.items;
+						if (earliest_order_date < int_dbl_t->second.order_date){
+							int_dbl_t->second.order_date = earliest_order_date;
+							int_dbl_t->second.lead_time = lead_days;
+						}
+					} else {
+						og_items_odate[*it_og] = {it_ogspd->second.items, earliest_order_date, lead_days};
+					}
+				}
+			}
 			if (index - start_index == combined_periods - 1){
 				start_index = index + 1;
 				if (!first_set)
 					query_stream << ",";
 				first_set = false;
-				query_stream << _construct_demand(og_sales, start_sales_period, sales_period, add_count);
-				og_sales.clear();
-			}
-			for(vector<int>::iterator iter2 = order_groups.begin(); iter2 != order_groups.end(); ++iter2) {
-				iorder = IntInt(iter->first, *iter2);
-				it = og_total_sales.find(iorder);
-				if(it != og_total_sales.end())
-				{
-					prev_sales = 0;
-					int_int_it = og_sales.find(*iter2);
-					if(int_int_it != og_sales.end())
-					{ prev_sales = int_int_it->second; }
-					og_sales[*iter2] = prev_sales + it->second;
-				}
+				query_stream << _construct_demand(og_items_odate, start_sales_period, sales_period_id, add_count);
+				og_items_odate.clear();
 			}
 			index++;
 		}
-		query_stream << "," << _construct_demand(og_sales, start_sales_period, sales_period, add_count);
+		query_stream << "," << _construct_demand(og_items_odate, start_sales_period, sales_period_id, add_count);
 		stmt->execute(query_stream.str());
 		out_stream << "Added " << add_count << " Demands";
 		delete res;
@@ -345,10 +366,9 @@ string MySQL::generate_orders()
 		stmt->execute("ALTER TABLE SalesEstimates_order AUTO_INCREMENT = 1");
 
 		order_group_costs = _get_order_group_costs();
-//		vector<int> order_groups = _get_order_groups();
 		sales_periods = _get_sales_period_dates();
 		ostringstream query_stream;
-		query_stream << "SELECT D.id, D.start_period_id, D.order_group_id, D.items FROM SalesEstimates_demand D" << endl;
+		query_stream << "SELECT D.id, D.start_period_id, D.order_group_id, D.items, D.required_date FROM SalesEstimates_demand D" << endl;
 		query_stream << "LEFT JOIN SalesEstimates_salesperiod SP ON D.start_period_id = SP.id" << endl;
 		query_stream << "ORDER BY D.order_group_id, SP.start_date" << endl;
 		res = stmt->executeQuery(query_stream.str());
@@ -359,10 +379,14 @@ string MySQL::generate_orders()
 		bool first_set = true;
 
 		int add_count = 0;
-		int og_id, items, min_order;
+		double items;
+		int og_id, min_order;
 		int start_period_id = -1;
 		int current_period_id = -1;
 		bool res_next = res->next();
+		time_t earliest_orderdate = 0;
+		time_t this_orderdate;
+		struct tm datetime;
 		vector<int> demand_ids;
 		while (res_next) {
 			og_id = res->getInt("order_group_id");
@@ -371,26 +395,64 @@ string MySQL::generate_orders()
 			demand_ids.clear();
 			while (og_id == res->getInt("order_group_id")) {
 				current_period_id = res->getInt("start_period_id");
-				if (items == 0)
+				if (items == 0){
 					start_period_id = current_period_id;
-				items += res->getInt("items");
+					earliest_orderdate = date_from_mysql(res->getString("required_date"), &datetime);
+				} else {
+					this_orderdate = date_from_mysql(res->getString("required_date"), &datetime);
+					if (this_orderdate < earliest_orderdate)
+						earliest_orderdate = this_orderdate;
+				}
+				items += res->getDouble("items");
 				demand_ids.push_back(res->getInt("id"));
 				res_next = res->next();
 				if (!res_next)
 					break;
 				if (items >= min_order && current_period_id != res->getInt("start_period_id")){
-					query_stream << _construct_order(items, start_period_id, og_id, demand_ids, add_count, first_set);
+					query_stream << _construct_order(items, earliest_orderdate, start_period_id, og_id, demand_ids, add_count, first_set);
 					demand_ids.clear();
 					items = 0;
 				}
 			}
 			if (items > 0)
-				query_stream << _construct_order(items, start_period_id, og_id, demand_ids, add_count, first_set);
+				query_stream << _construct_order(items, earliest_orderdate, start_period_id, og_id, demand_ids, add_count, first_set);
 		}
 		query_stream << endl << "ON DUPLICATE KEY UPDATE order_id=VALUES(order_id)";
 		stmt->execute(query_stream.str());
-		out_stream << "Added " << add_count << " Demands";
+		out_stream << "Added " << add_count << " Orders";
 		delete res;
+		delete stmt;
+	} catch (sql::SQLException &e) {
+		raise_error(e, out_stream, __FUNCTION__);
+	}
+	return out_stream.str();
+}
+
+string MySQL::test_date_arith()
+{
+	ostringstream out_stream;
+	try {
+		sql::Statement *stmt;
+		stmt = con->createStatement();
+		sales_periods = _get_sales_period_dates();
+		time_t tb4 = 0;
+		for (map<int, SalesPeriod>::iterator iter = sales_periods.begin(); iter != sales_periods.end(); ++iter) {
+			out_stream << "ID: " << iter->first << ", start: " << date_string(iter->second.first);
+			time_t startl = date_t(iter->second.first);
+			out_stream << ", start long: " << startl << endl;
+			struct tm start2 =  date_tm(startl);
+			out_stream << "ID: " << iter->first << ", start: " << date_string(start2) << endl;
+			time_t t5 = sub_days(iter->second.first, 5);
+			struct tm tm5 = date_tm(t5);
+			out_stream << "ID: " << iter->first << ", s - 5: " << date_string(tm5) << endl;
+			time_t t10 =sub_days(iter->second.first, 10);
+			out_stream << "ID: " << iter->first << ", s -10: " << date_string(date_tm(t10)) << endl;
+			string resp = t5 < tb4 ? "yes" : "no";
+			out_stream << "t - 5  less than tb4: " << resp << endl;
+			resp = t10 < tb4 ? "yes" : "no";
+			out_stream << "t - 10 less than tb4: " << resp << endl;
+			tb4 = startl;
+		}
 		delete stmt;
 	} catch (sql::SQLException &e) {
 		raise_error(e, out_stream, __FUNCTION__);
@@ -411,6 +473,7 @@ BOOST_PYTHON_MODULE(worker)
         .def("generate_skusales", &MySQL::generate_skusales)
         .def("calculate_demand", &MySQL::calculate_demand)
         .def("generate_orders", &MySQL::generate_orders)
+        .def("test_date_arith", &MySQL::test_date_arith)
     ;
 }
 #else

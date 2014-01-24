@@ -136,51 +136,41 @@ map<int, SalesPeriod> MySQL::_get_sales_period_dates()
 	struct tm start_tm;
 	struct tm finish_tm;
 	while (res->next()) {
-		memset(&start_tm, 0, sizeof(struct tm));
-		memset(&finish_tm, 0, sizeof(struct tm));
-		strptime(res->getString("start_date").c_str(), "%Y-%m-%d", &start_tm);
-		mktime(&start_tm);
-		strptime(res->getString("finish_date").c_str(), "%Y-%m-%d", &finish_tm);
-		mktime(&finish_tm);
-//		cout << res->getInt("id") << ", start: "<< res->getString("start_date") << ", finish: "<< res->getString("finish_date") << endl;
-//		char buf [80];
-//		strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &start_tm);
-//		cout << "start_tm: ";
-//		puts(buf);
-//		strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M %z", &finish_tm);
-//		cout << "finish_tm: ";
-//		puts(buf);
+		date_from_mysql(res->getString("start_date"), &start_tm);
+		date_from_mysql(res->getString("finish_date"), &finish_tm);
 		sales_periods[res->getInt("id")] = SalesPeriod(start_tm,  finish_tm);
 	}
 	delete res;
 	return sales_periods;
 }
 
-string MySQL::_construct_demand(map<int, int> og_sales, int start_p, int end_p, int &add_count)
+string MySQL::_construct_demand(map<int, DblTimet> og_items_odate, int start_p, int end_p, int &add_count)
 {
-	cout << "Demand Period start: " << date_string(sales_periods[start_p].first) << endl;
+//	cout << "Demand Period start: " << date_string(sales_periods[start_p].first) << endl;
 //	cout << "Demand Period end: " << date_string(sales_periods[end_p].second) << endl;
 
 	ostringstream query_stream;
 	bool first_set = true;
-	for (map<int, int>::iterator iter = og_sales.begin(); iter != og_sales.end(); ++iter) {
+	string date_str;
+	for (map<int, DblTimet>::iterator iter = og_items_odate.begin(); iter != og_items_odate.end(); ++iter) {
 		if (!first_set)
 			query_stream << ",";
 		first_set = false;
-		query_stream << "(" << start_p << "," << end_p << "," << iter->first << ","  << iter->second << ")";
+		date_str = mysql_date_string(date_tm(iter->second.order_date));
+		query_stream << "(" << start_p << "," << end_p << "," << iter->first;
+		query_stream << ","  << iter->second.items << ",'"  << date_str << "',"  << iter->second.lead_time << ")";
 		add_count++;
 	}
 	return query_stream.str();
 }
 
-string MySQL::_construct_order(int items, int start_period_id, int og_id, vector<int> demand_ids, int &add_count, bool &first_set)
+string MySQL::_construct_order(int items, time_t order_date, int start_period_id, int og_id, vector<int> demand_ids, int &add_count, bool &first_set)
 {
 	sql::Statement *stmt;
 	sql::ResultSet *res;
 	stmt = con->createStatement();
 	double cost = order_group_costs[og_id].get_price(items) * (double)items;
-	struct tm start_date = sales_periods[start_period_id].first;
-	string date_str = mysql_date_string(start_date);
+	string date_str = mysql_date_string(date_tm(order_date));
 	ostringstream query_stream;
 	query_stream << "INSERT INTO SalesEstimates_order(place_date, order_group_id, items, cost) VALUES";
 	query_stream << "('" << date_str << "'," << og_id << "," << items << "," << cost << ")" << endl;
@@ -267,17 +257,37 @@ void print_columns(sql::ResultSet *rs)
 	cout << "\" which belongs to the Schema: \"" << res_meta -> getSchemaName(1) << "\"" << endl;
 }
 
-string date_string(struct tm start_tm){
+string date_string(struct tm tm){
 	char buf [200];
-	strftime(buf, sizeof(buf), "%a %d-%m-%Y", &start_tm);//%H:%M %z
+	strftime(buf, sizeof(buf), "%a %d-%m-%Y", &tm);//%H:%M %z
 	return string(buf);
 }
 
-string mysql_date_string(struct tm start_tm){
+string mysql_date_string(struct tm tm){
 	char buf [200];
-	strftime(buf, sizeof(buf), "%Y-%m-%d", &start_tm);//%H:%M %z
+	strftime(buf, sizeof(buf), "%Y-%m-%d", &tm);//%H:%M %z
 	return string(buf);
 }
 
+time_t date_t(struct tm tm) {
+	return mktime(&tm);
+}
+
+time_t date_from_mysql(string mysqlstr, struct tm * tm){
+	memset(tm, 0, sizeof(struct tm));
+	strptime(mysqlstr.c_str(), "%Y-%m-%d", tm);
+	return mktime(tm);
+}
+
+struct tm date_tm(time_t date_stamp) {
+	struct tm * ptm = gmtime(&date_stamp);
+	return *ptm;
+}
+
+time_t sub_days(struct tm tm, int days) {
+	time_t dt = date_t(tm);
+	dt -= days * 3600 * 24;
+	return dt;
+}
 
 

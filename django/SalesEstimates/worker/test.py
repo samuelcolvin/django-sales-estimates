@@ -51,8 +51,11 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def test_generate_skus(self):
 #     	print self.mysql.generate_skusales()
-        print self.mysql.calculate_demand(settings.DEMAND_GROUPING)
+        print self.mysql.calculate_demand(settings.DEMAND_GROUPING, settings.GENERAL_LEAD_TIME)
         print self.mysql.generate_orders()
+    
+#     def test_date_arith(self):
+#         print self.mysql.test_date_arith()
 
 if __name__ == '__main__':
     unittest.main()

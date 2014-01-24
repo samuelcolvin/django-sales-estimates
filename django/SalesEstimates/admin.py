@@ -110,7 +110,7 @@ class OrderAdmin(admin.ModelAdmin):
 admin.site.register(m.Order, OrderAdmin)
 
 class DemandAdmin(admin.ModelAdmin):
-    list_display = ('id', 'str_simple_date', 'order_group', 'items')
+    list_display = ('id', 'required_date', 'lead_time_total', 'str_simple_date', 'order_group', 'items')
     
 admin.site.register(m.Demand, DemandAdmin)
     

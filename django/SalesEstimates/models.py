@@ -22,8 +22,8 @@ class Manufacturer(BasicModel):
 class OrderGroup(BasicModel):
     nominal_price = models.DecimalField('Nominal price per unit', max_digits=11, decimal_places=4, null=True, blank=True)
     minimum_order = models.IntegerField(default=0)
-    lead_time = models.IntegerField('Lead Time (days)', default=0)
     manufacturer = models.ForeignKey(Manufacturer, related_name='order_group')
+    delivery_lead_time = models.IntegerField(default = 0)
     
     def cost(self, orders):
         costlevels_avail = self.costlevels.filter(order_quantity__lte = orders)
@@ -76,6 +76,7 @@ def price_str(value):
 
 class Component(BasicModel):
     order_group = models.ForeignKey(OrderGroup, related_name='components')
+    supply_lead_time = models.IntegerField('Supply Lead Time (days)', default=0)
     
     def get_manufacturer(self):
         return self.order_group.manufacturer
@@ -90,6 +91,7 @@ class Component(BasicModel):
 class Assembly(BasicModel):
     size = models.CharField(max_length=200, null=True, blank=True)
     components = models.ManyToManyField(Component, through='AssyComponent', related_name='assemblies')
+    assembly_lead_time = models.IntegerField('Assembly Lead Time (days)', default=0)
     
     def component_count(self):
         return self.components.count()
@@ -202,6 +204,7 @@ class Promotion(BasicModel):
 class Customer(BasicModel):
     dft_srf = models.FloatField('Default Sale Rate Factor', default = 1)
     dft_store_count = models.IntegerField(null = True, blank = True)
+    delivery_lead_time = models.IntegerField('Delivery Lead Time (days)', default=0)
     
     def all_skus(self):
         return CustomerSKUInfo.objects.filter(customer=self)
@@ -339,7 +342,7 @@ class SKUSales(models.Model):
 class Order(models.Model):
     place_date = models.DateField()
     order_group = models.ForeignKey(OrderGroup, related_name='orders')
-    items = models.IntegerField('Number of Components Required')
+    items = models.FloatField('Number of Components Required')
     cost = models.DecimalField('Cost of Components', max_digits=11, decimal_places=4)
      
     def demand_count(self):
@@ -359,10 +362,12 @@ class Order(models.Model):
         verbose_name = 'Order'
  
 class Demand(models.Model):
+    required_date = models.DateField()
+    lead_time_total = models.IntegerField('Total lead time (days)')
     start_period = models.ForeignKey(SalesPeriod, related_name='demand_start')
     end_period = models.ForeignKey(SalesPeriod, related_name='demand_end')
     order_group = models.ForeignKey(OrderGroup, related_name='demands')
-    items = models.IntegerField('Number of Components Required')
+    items = models.FloatField('Number of Components Required')
     order = models.ForeignKey(Order, related_name='demands', null=True, blank = True)
      
     def str_simple_date(self):

@@ -21,13 +21,22 @@ using namespace boost::python;
 #endif
 
 using namespace std;
-void raise_error(sql::SQLException e, ostringstream &stream, string func);
-void print_columns(sql::ResultSet *rs);
-string date_string(struct tm start_tm);
-string mysql_date_string(struct tm start_tm);
+void raise_error(sql::SQLException, ostringstream&, string);
+void print_columns(sql::ResultSet*);
+string date_string(struct tm);
+string mysql_date_string(struct tm);
+time_t date_t(struct tm);
+time_t date_from_mysql(string, struct tm*);
+struct tm date_tm(time_t);
+time_t sub_days(struct tm, int);
 
 typedef pair<struct tm, struct tm> SalesPeriod;
 typedef pair<int, int> IntInt;
+struct DblTimet {
+	double items;
+	time_t order_date;
+	int lead_time;
+};
 
 struct CSKUI {
 	int id;
@@ -37,16 +46,17 @@ struct CSKUI {
 	double price;
 };
 
+struct OGSPDemand {
+	double items;
+	int cust_lt;
+	int assy_lt;
+	int comp_lt;
+};
+
 struct Promotion {
 	double srf;
 	double price_ratio;
 	vector<int> skus;
-};
-
-struct SKUSalesInfo {
-	int period_id;
-	int sales;
-	vector<IntInt> og__count;
 };
 
 class ComponentOrderGroup {
@@ -72,8 +82,8 @@ class MySQL {
 	map<int, Promotion> _get_promotions();
 	map<int, ComponentOrderGroup> _get_order_group_costs();
 	vector<int> _get_order_groups();
-	string _construct_demand(map<int, int>, int, int, int&);
-	string _construct_order(int, int, int, vector<int>, int&, bool&);
+	string _construct_demand(map<int, DblTimet>, int, int, int&);
+	string _construct_order(int, time_t, int, int, vector<int>, int&, bool&);
   public:
 	string connect(string, string, string, string);
 
@@ -94,8 +104,11 @@ class MySQL {
 	string generate_skusales();
 
 	// calculate the demand associated with sku sales
-	string calculate_demand(int);
+	string calculate_demand(int, int);
 
 	// generate orders to satisfy demand
 	string generate_orders();
+
+	// function for testing things out
+	string test_date_arith();
 };

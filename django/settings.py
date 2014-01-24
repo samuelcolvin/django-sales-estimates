@@ -207,6 +207,8 @@ IMEX_APP = 'SalesEstimates'
 
 # number of weeks demands are grouped into
 DEMAND_GROUPING = 13
+# general constant lead time in weeks
+GENERAL_LEAD_TIME = 14
 
 #sales period length on months
 SALES_PERIOD_START_DATE = '2014-01-01'
