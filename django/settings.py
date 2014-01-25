@@ -195,8 +195,8 @@ SK_VIEW_SETTINGS ={'viewname': 'process', 'args2include': [False, True], 'base_n
 
 SITE_TITLE = 'childsfarm'
 TOP_MENU = [{'url': 'process', 'name': 'Process'},
-# 			{'url': 'import', 'name': 'Import'}, 
-			{'url': 'imex', 'name': 'Export'}]
+ 			{'url': 'imex_import', 'name': 'Import'}, 
+			{'url': 'imex_export', 'name': 'Export'}]
 LOGIN_REDIRECT_URL = '/'
 INTERNAL_IPS = ('127.0.0.1',)
 
