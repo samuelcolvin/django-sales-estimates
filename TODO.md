@@ -11,7 +11,7 @@
 * DONE exlcude some fields from display
 * DONE fix breadcrumbs
 * DONE correct index title from markets trace
-* DONE rename whole thing to ignore child's farm and become brand less (extra file of customer settings?)
+* DONE rename whole thing to ignore child`s farm and become brand less (extra file of customer settings?)
 * add front page showing summary incomplete things
 * DONE calculate sales estimates
 * DONE think about how sales periods are generated with import
@@ -39,7 +39,7 @@
 * DONE add output: sku
 * add output: sku group
 * DONE orders required
-* test calculation completely to check it's right
+* test calculation completely to check it`s right
 * use numeral.js for formatting values in display page
 * add "paste mode" to django-hot
 * DONE edit templates so HOT works with multiple tags in the same page
@@ -48,10 +48,11 @@
 * fix and test Imex
 * DONE group orders and account for discount (remember minimum order)
 * DONE get lead time to work properly
-* get formsets working properly in all add/edit pages - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
+* get formsets working properly in all add/edit pages - 
+    * under each item (eg. customer) have buttons for mass edit of associated items - eg. customer-sku-info or customer-sales-periods only requires "add new item" feature as through can be defined a for all manytomany relationships
+    * Done use - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
 
-problem with calculating orders/lead times - if demand is based on order group assembly and customer are not 
-known therefore can't calculate lead time based on them
+problem with calculating orders/lead times - if demand is based on order group assembly and customer are not known therefore can`t calculate lead time based on them
 
 solution is to add lead time to demand then use that to calculate order date for orders.
 
