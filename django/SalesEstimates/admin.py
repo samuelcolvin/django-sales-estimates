@@ -62,8 +62,12 @@ class CustomerSKUInfoInline(admin.TabularInline):
     model = m.CustomerSKUInfo
     extra = 5
 
+class CustomerSalesPeriodInline(admin.TabularInline):
+    model = m.CustomerSalesPeriod
+    extra = 5
+
 class CustomerAdmin(admin.ModelAdmin):
-    inlines = [CustomerSKUInfoInline]
+    inlines = [CustomerSKUInfoInline, CustomerSalesPeriodInline]
     list_display = ('id', 'name', 'sku_count')
     
 admin.site.register(m.Customer, CustomerAdmin)
