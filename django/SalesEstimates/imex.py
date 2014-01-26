@@ -2,6 +2,9 @@ import Imex
 import models as m
 import openpyxl
 from django.db import models as db_models
+import worker
+
+PERFORM_BEFORE_UPLOAD = worker.delete_before_upload
         
 class Manufacturer(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields
