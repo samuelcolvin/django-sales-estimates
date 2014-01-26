@@ -8,7 +8,7 @@ class BasicModel(models.Model):
     xl_id = models.IntegerField('Excel ID', default=-1, editable=False)
     
     def __unicode__(self):
-        return '%d: %s' % (self.id, self.name)
+        return self.name
     
     class Meta:
         abstract = True
@@ -89,14 +89,14 @@ class Component(BasicModel):
     
 class Assembly(BasicModel):
     size = models.CharField(max_length=200, null=True, blank=True)
-    components = models.ManyToManyField(Component, through='AssyComponent', related_name='assemblies')
+#     components = models.ManyToManyField(Component, through='AssyComponent', related_name='assemblies')
     assembly_lead_time = models.IntegerField('Assembly Lead Time (days)', default=0)
     
     def component_count(self):
-        return self.components.count()
+        return self.assy_components.count()
     
     def nominal_raw_cost(self):
-        raw_cost = self.components.aggregate(models.Sum('order_group__nominal_price'))['order_group__nominal_price__sum']
+        raw_cost = self.assy_components.aggregate(raw_price_sum = models.Sum('component__order_group__nominal_price'))['raw_price_sum']
         if raw_cost:
             return float(raw_cost)
         else:
@@ -106,7 +106,7 @@ class Assembly(BasicModel):
         return price_str(self.nominal_raw_cost())
     
     def __unicode__(self):
-        return '%d: %s' % (self.id, self.name)
+        return self.name
         
     class Meta:
         verbose_name_plural = 'Assemblies'
@@ -114,9 +114,12 @@ class Assembly(BasicModel):
 
 class AssyComponent(models.Model):
     xl_id = models.IntegerField('Excel ID', default=-1, editable=False)
-    component = models.ForeignKey(Component)
-    assembly = models.ForeignKey(Assembly)
+    component = models.ForeignKey(Component, related_name='assy_components')
+    assembly = models.ForeignKey(Assembly, related_name='assy_components')
     count = models.IntegerField(default = 1)
+    
+    def component_supplier_lead_time(self):
+        return self.component.supply_lead_time
     
     class Meta:
         verbose_name_plural = 'Assembly Components'
@@ -241,7 +244,7 @@ class CustomerSKUInfo(models.Model):
         return price_str(self.price)
         
     def __unicode__(self):
-        return '%d: %s for %s' % (self.id, self.sku.name, self.customer.name)
+        return '%s for %s' % (self.sku.name, self.customer.name)
         
     class Meta:
         unique_together = (('sku', 'customer'),)
