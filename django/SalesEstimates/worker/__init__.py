@@ -9,6 +9,7 @@ import decimal
 from django.db import transaction
 from time import time
 import worker
+from django.db import connection
 
 def generate_sales_periods(log):
     start_date = dtdt.strptime(settings.SALES_PERIOD_START_DATE, settings.CUSTOM_DATE_FORMAT)
@@ -81,6 +82,7 @@ def delete_before_upload(log):
     generate_sales_periods(log)
         
 def clear_se(log):
+    cursor = connection.cursor()
     for mod_name in dir(m):
         if mod_name == 'User':
             continue
@@ -88,3 +90,4 @@ def clear_se(log):
         if inspect.isclass(mod)  and issubclass(mod, db_models.Model) and not mod._meta.abstract:
             mod.objects.all().delete()
             log('Deleting all records from %s' % mod.__name__)
+            cursor.execute('ALTER TABLE %s AUTO_INCREMENT = 1' % mod._meta.db_table)

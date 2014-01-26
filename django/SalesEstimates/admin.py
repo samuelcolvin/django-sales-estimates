@@ -22,12 +22,12 @@ class ComponentAdmin(admin.ModelAdmin):
     
 admin.site.register(m.Component, ComponentAdmin)
 
-class ComponentInline(admin.TabularInline):
-    model = m.Assembly.components.through
+class AssyComponentInline(admin.TabularInline):
+    model = m.AssyComponent
     extra = 5
 
 class AssemblyAdmin(admin.ModelAdmin):
-    inlines = [ComponentInline]
+    inlines = [AssyComponentInline]
     list_display = ('id', 'name', 'nominal_raw_cost', 'component_count')
     exclude = ('components',)
 

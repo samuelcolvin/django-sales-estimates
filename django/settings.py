@@ -200,6 +200,9 @@ TOP_MENU = [{'url': 'process', 'name': 'Process'},
 LOGIN_REDIRECT_URL = '/'
 INTERNAL_IPS = ('127.0.0.1',)
 
+# HotDjango settings
+# HOT_ID_IN_MODEL_STR = True
+
 #ExcelImportExport Settings
 IMEX_APP = 'SalesEstimates'
 

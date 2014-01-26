@@ -45,12 +45,16 @@
 * DONE edit templates so HOT works with multiple tags in the same page
 * DONE set sales to be double not int
 * DONE use external module for import/export
-* fix and test Imex
+* DONEfix and test Imex
 * DONE group orders and account for discount (remember minimum order)
 * DONE get lead time to work properly
 * get formsets working properly in all add/edit pages - 
     * under each item (eg. customer) have buttons for mass edit of associated items - eg. customer-sku-info or customer-sales-periods only requires "add new item" feature as through can be defined a for all manytomany relationships
     * Done use - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
+* get rid of "save required message after cancelling sub change" on hands on table
+* set some columns to readonly on hot
+* add buttons to hot from edit page
+
 
 problem with calculating orders/lead times - if demand is based on order group assembly and customer are not known therefore can`t calculate lead time based on them
 

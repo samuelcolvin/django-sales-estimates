@@ -55,17 +55,18 @@ class OrderGroup(SkeletalDisplay.ModelDisplay):
 	class HotTable(HotDjango.ModelSerialiser):
 		manufacturer = HotDjango.IDNameSerialiser(m.Manufacturer)
 		class Meta:
-			fields = ('id', 'name', 'description', 'comment', 'minimum_order', 'lead_time', 'manufacturer', 'costlevels')
+			fields = ('id', 'name', 'description', 'comment', 'minimum_order', 'manufacturer', 'costlevels')
 
 class Component(SkeletalDisplay.ModelDisplay):
 	model = m.Component
-	extra_funcs = [('Nominal Price', 'str_nominal_price'), ('Manufacturer', 'get_manufacturer')]
-	attached_tables = [{'name':'Assembly', 'populate':'assemblies', 'title':'Assemblies Using this Component'}]
+ 	extra_funcs = [('Nominal Price', 'str_nominal_price'), ('Manufacturer', 'get_manufacturer')]
+# 	attached_tables = [{'name':'Assembly', 'populate':'assy_components__assembly', 'title':'Assemblies Using this Component'}]
 	index = 1
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		name = SkeletalDisplay.SelfLinkColumn()
 		str_nominal_price = tables.Column(verbose_name='Nominal Price')
+		supply_lead_time = tables.Column(verbose_name='Supplier Lead Time')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			exclude = ('description', 'nominal_price', 'xl_id')
 	
@@ -74,10 +75,26 @@ class Component(SkeletalDisplay.ModelDisplay):
 		class Meta:
 			fields = ('id', 'name', 'description', 'comment', 'order_group')
 
+class AssyComponent(SkeletalDisplay.ModelDisplay):
+	model = m.AssyComponent
+	display = False
+	
+	class DjangoTable(SkeletalDisplay.Table):
+		component = tables.LinkColumn('process', kwargs={'model':'Component', 'id': A('component.id')}, verbose_name='Component')
+		count = tables.Column(verbose_name='Count')
+		component_supplier_lead_time = tables.Column(verbose_name='Supplier Lead Time')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			exclude = ('id',)
+	
+	class HotTable(HotDjango.ModelSerialiser):
+		component = HotDjango.IDNameSerialiser(m.Component)
+		class Meta:
+			fields = ('id', 'assembly', 'component', 'count')
+			
 class Assembly(SkeletalDisplay.ModelDisplay):
 	model = m.Assembly
 	extra_funcs = [('Nominal Raw Cost', 'str_nominal_raw_cost'), ('Components', 'component_count')]
-	attached_tables = [{'name':'Component', 'populate':'components', 'title':'Components'}]
+	attached_tables = [{'name':'AssyComponent', 'populate':'assy_components', 'title':'Components'}]
 	index = 2
 	
 	class DjangoTable(SkeletalDisplay.Table):
@@ -87,10 +104,11 @@ class Assembly(SkeletalDisplay.ModelDisplay):
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			exclude = ('id', 'description')
 	
+	related_tables = {'assy_components': AssyComponent}
 	class HotTable(HotDjango.ModelSerialiser):
-		components = HotDjango.IDNameSerialiser(m.Component, many=True)
+# 		components = HotDjango.IDNameSerialiser(m.Component, many=True)
 		class Meta:
-			fields = ('id', 'name', 'description', 'comment', 'size', 'components')
+			fields = ('id', 'name', 'description', 'comment', 'size', 'assy_components')
 
 class SKUGroup(SkeletalDisplay.ModelDisplay):
 	model = m.SKUGroup
@@ -113,6 +131,7 @@ class MonthSerialiser(serializers.WritableField):
 		return next(choice[1] for choice in m.MonthVariation.MONTHS if choice[0] == item)
 	def from_native(self, item):
 		return next(choice[0] for choice in m.MonthVariation.MONTHS if choice[1] == item)
+
 class MonthVariation(SkeletalDisplay.ModelDisplay):
 	model = m.MonthVariation
 	display = False
@@ -178,6 +197,30 @@ class SKU(SkeletalDisplay.ModelDisplay):
 		class Meta:
 			fields = ('id', 'name', 'description', 'comment', 'dft_price', 'dft_srf', 'dft_season_var', 'group', 'assemblies')
 
+class CustomerSalesPeriod(SkeletalDisplay.ModelDisplay):
+	model = m.CustomerSalesPeriod
+	display = False
+	attached_tables = [{'name':'SKUSales', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
+	
+	class DjangoTable(SkeletalDisplay.Table):
+		str_period = SkeletalDisplay.SelfLinkColumn(verbose_name='Sales Period')
+		store_count = tables.Column(verbose_name='Store Count')
+		promotion = tables.Column(verbose_name='Promotion')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+	
+	class Table2(SkeletalDisplay.Table):
+		customer = SkeletalDisplay.SelfLinkColumn(verbose_name='Customer')
+		store_count = tables.Column(verbose_name='Store Count')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+	
+	class HotTable(HotDjango.ModelSerialiser):
+		period = HotDjango.IDNameSerialiser(m.SalesPeriod)
+		promotion = HotDjango.IDNameSerialiser(m.Promotion)
+		class Meta:
+			fields = ('id', 'customer', 'period', 'store_count', 'promotion')
+
 class Customer(SkeletalDisplay.ModelDisplay):
 	model = m.Customer
 	extra_funcs= [('SKUs', 'sku_count')]
@@ -191,9 +234,10 @@ class Customer(SkeletalDisplay.ModelDisplay):
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			exclude = ('id', 'description')
 		
+	related_tables = {'c_sales_periods': CustomerSalesPeriod}
 	class HotTable(HotDjango.ModelSerialiser):
 		class Meta:
-			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count')
+			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count', 'c_sales_periods')
 
 class CustomerSKUInfo(SkeletalDisplay.ModelDisplay):
 	model = m.CustomerSKUInfo
@@ -236,23 +280,6 @@ class SalesPeriod(SkeletalDisplay.ModelDisplay):
 		str_simple_date = SkeletalDisplay.SelfLinkColumn(verbose_name='Period')
 		xl_id = tables.Column(verbose_name='Excel ID')
 		length_days = tables.Column(verbose_name='Length in Days')
-		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			pass
-
-class CustomerSalesPeriod(SkeletalDisplay.ModelDisplay):
-	model = m.CustomerSalesPeriod
-	display = False
-	attached_tables = [{'name':'SKUSales', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
-	
-	class DjangoTable(SkeletalDisplay.Table):
-		str_period = SkeletalDisplay.SelfLinkColumn(verbose_name='Sales Period')
-		store_count = tables.Column(verbose_name='Store Count')
-		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			pass
-	
-	class Table2(SkeletalDisplay.Table):
-		customer = SkeletalDisplay.SelfLinkColumn(verbose_name='Customer')
-		store_count = tables.Column(verbose_name='Store Count')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 
