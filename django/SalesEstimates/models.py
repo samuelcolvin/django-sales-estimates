@@ -117,6 +117,10 @@ class AssyComponent(models.Model):
     component = models.ForeignKey(Component)
     assembly = models.ForeignKey(Assembly)
     count = models.IntegerField(default = 1)
+    
+    class Meta:
+        verbose_name_plural = 'Assembly Components'
+        verbose_name = 'Assembly Component'
 
 class SeasonalVariation(BasicModel):
     pass
@@ -317,6 +321,10 @@ class CustomerSalesPeriod(models.Model):
         if self.store_count is None and self.customer.dft_store_count is not None:
             self.store_count = self.customer.dft_store_count
             self.save(resave = True)
+    
+    class Meta:
+        verbose_name_plural = 'Customer Sales Periods'
+        verbose_name = 'Customer Sales Period'
 
 class SKUSales(models.Model):
     period = models.ForeignKey(CustomerSalesPeriod, related_name='sku_sales')
