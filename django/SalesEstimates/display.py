@@ -159,7 +159,7 @@ class SeasonalVariation(SkeletalDisplay.ModelDisplay):
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 		
-	related_tables = {'months': MonthVariation}
+ 	related_tables = {'months': MonthVariation}
 	class HotTable(HotDjango.ModelSerialiser):
 		class Meta:
 			fields = ('id', 'name', 'description', 'comment', 'months')

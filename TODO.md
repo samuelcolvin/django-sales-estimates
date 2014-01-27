@@ -53,7 +53,7 @@
     * Done use - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
 * get rid of "save required message after cancelling sub change" on hands on table
 * set some columns to readonly on hot
-* add buttons to hot from edit page
+* add buttons to hot form edit page
 
 
 problem with calculating orders/lead times - if demand is based on order group assembly and customer are not known therefore can`t calculate lead time based on them
