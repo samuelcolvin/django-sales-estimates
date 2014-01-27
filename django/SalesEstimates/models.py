@@ -2,9 +2,9 @@ from django.db import models
 import settings
 
 class BasicModel(models.Model):
-    name = models.CharField(max_length=200)
-    description = models.TextField(null=True, blank=True)
-    comment = models.TextField(null=True, blank=True)
+    name = models.CharField(max_length=200, verbose_name='Name')
+    description = models.TextField(null=True, blank=True, verbose_name='Description')
+    comment = models.TextField(null=True, blank=True, verbose_name='Comment')
     xl_id = models.IntegerField('Excel ID', default=-1, editable=False)
     
     def __unicode__(self):
@@ -88,7 +88,7 @@ class Component(BasicModel):
         verbose_name = 'Component'
     
 class Assembly(BasicModel):
-    size = models.CharField(max_length=200, null=True, blank=True)
+    size = models.CharField(max_length=200, null=True, blank=True, verbose_name="Size")
 #     components = models.ManyToManyField(Component, through='AssyComponent', related_name='assemblies')
     assembly_lead_time = models.IntegerField('Assembly Lead Time (days)', default=0)
     
@@ -251,21 +251,32 @@ class CustomerSKUInfo(models.Model):
         verbose_name_plural = 'Customer SKU Information'
         verbose_name = 'Customer SKU Information'
     
+    def __init__(self, *args, **kwargs):
+        super(CustomerSKUInfo, self).__init__(*args, **kwargs)
+        self.__orig_srf = self.srf
+    
     def save(self, *args, **kwargs):
+        resave = kwargs.pop('resave', False)
         super(CustomerSKUInfo, self).save(*args, **kwargs)
+        if resave:
+            return
         editted = False
+        dft_srf = self.sku.dft_srf * self.customer.dft_srf
         if self.price is None and self.sku.dft_price is not None:
             self.price = self.sku.dft_price
             editted = True
         if self.srf is None:
-            self.srf = self.sku.dft_srf * self.customer.dft_srf
+            self.srf = dft_srf
             self.custom_srf = False
+            editted = True
+        elif self.srf != self.__orig_srf and self.srf != dft_srf:
+            self.custom_srf = True
             editted = True
         if self.season_var is None:
             self.season_var = self.sku.dft_season_var
             editted = True
         if editted:
-            self.save()
+            self.save(resave = True)
 
 short_date_form = '%d-%b-%y'
 class SalesPeriod(models.Model):
