@@ -43,6 +43,7 @@ class OrderGroup(SkeletalDisplay.ModelDisplay):
 					{'name':'Component', 'populate':'components', 'title':'Components with this Order Group'}]
 	
 	index = 0
+	verbose_names = {'costlevels': 'Cost Levels'}
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		name = SkeletalDisplay.SelfLinkColumn()
@@ -96,6 +97,7 @@ class Assembly(SkeletalDisplay.ModelDisplay):
 	extra_funcs = [('Nominal Raw Cost', 'str_nominal_raw_cost'), ('Components', 'component_count')]
 	attached_tables = [{'name':'AssyComponent', 'populate':'assy_components', 'title':'Components'}]
 	index = 2
+	verbose_names = {'assy_components': 'Components'}
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		name = SkeletalDisplay.SelfLinkColumn()
@@ -167,6 +169,8 @@ class SeasonalVariation(SkeletalDisplay.ModelDisplay):
 class Promotion(SkeletalDisplay.ModelDisplay):
 	model = m.Promotion
 	index = 2.8
+	attached_tables = [{'name':'SKU', 'populate':'skus', 'title':'SKUs'},
+					{'name':'CustomerSalesPeriod', 'populate':'c_sales_periods', 'table':'Table3', 'title':'Sales Periods'}]
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		name = SkeletalDisplay.SelfLinkColumn()
@@ -200,7 +204,7 @@ class SKU(SkeletalDisplay.ModelDisplay):
 class CustomerSalesPeriod(SkeletalDisplay.ModelDisplay):
 	model = m.CustomerSalesPeriod
 	display = False
-	attached_tables = [{'name':'SKUSales', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
+# 	attached_tables = [{'name':'SKUSales', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		str_period = SkeletalDisplay.SelfLinkColumn(verbose_name='Sales Period')
@@ -215,34 +219,24 @@ class CustomerSalesPeriod(SkeletalDisplay.ModelDisplay):
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 	
+	class Table3(SkeletalDisplay.Table):
+		str_period = SkeletalDisplay.SelfLinkColumn(verbose_name='Sales Period')
+		customer = SkeletalDisplay.SelfLinkColumn(verbose_name='Customer')
+		store_count = tables.Column(verbose_name='Store Count')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+	
 	class HotTable(HotDjango.ModelSerialiser):
 		period = HotDjango.IDNameSerialiser(m.SalesPeriod)
 		promotion = HotDjango.IDNameSerialiser(m.Promotion)
 		class Meta:
 			fields = ('id', 'customer', 'period', 'store_count', 'promotion')
-
-class Customer(SkeletalDisplay.ModelDisplay):
-	model = m.Customer
-	extra_funcs= [('SKUs', 'sku_count')]
-	attached_tables = [{'name':'CustomerSKUInfo', 'table': 'Table2', 'populate_func': 'all_skus', 'title':'SKUs'},
-					{'name':'CustomerSalesPeriod', 'populate':'c_sales_periods', 'title':'Sales Periods'}]
-	index = 4
-	
-	class DjangoTable(SkeletalDisplay.Table):
-		name = SkeletalDisplay.SelfLinkColumn()
-		sku_count = tables.Column(verbose_name='SKUs')
-		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			exclude = ('id', 'description')
-		
-	related_tables = {'c_sales_periods': CustomerSalesPeriod}
-	class HotTable(HotDjango.ModelSerialiser):
-		class Meta:
-			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count', 'c_sales_periods')
-
+			
 class CustomerSKUInfo(SkeletalDisplay.ModelDisplay):
 	model = m.CustomerSKUInfo
-	index = 5
-	attached_tables = [{'name':'SKUSales', 'table':'Table2', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
+	display = False
+# 	index = 5
+# 	attached_tables = [{'name':'SKUSales', 'table':'Table2', 'populate':'sku_sales', 'title':'SKU Sales Estimates'}]
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		customer_name = SkeletalDisplay.SelfLinkColumn(verbose_name='Customer')
@@ -257,6 +251,9 @@ class CustomerSKUInfo(SkeletalDisplay.ModelDisplay):
 	class Table2(SkeletalDisplay.Table):
 		sku_name = SkeletalDisplay.SelfLinkColumn(verbose_name='SKU')
 		str_price = tables.Column(verbose_name='Price')
+		srf = tables.Column(verbose_name='Sale Rate')
+		custom_srf = tables.BooleanColumn(verbose_name='Custom Sale Rate')
+		season_var = tables.Column(verbose_name='Seasonal Variation')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 		
@@ -267,14 +264,35 @@ class CustomerSKUInfo(SkeletalDisplay.ModelDisplay):
 		class Meta:
 			fields = ('id', 'sku', 'customer', 'season_var', 'price', 'srf')
 
+class Customer(SkeletalDisplay.ModelDisplay):
+	model = m.Customer
+	extra_funcs= [('SKUs', 'sku_count')]
+	attached_tables = [{'name':'CustomerSKUInfo', 'table': 'Table2', 'populate_func': 'all_skus', 'title':'SKUs'},
+					{'name':'CustomerSalesPeriod', 'populate':'c_sales_periods', 'title':'Sales Periods'}]
+	index = 4
+	verbose_names = {'c_sales_periods': 'Sales Periods', 'c_skus': 'SKUs'}
+	
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
+		sku_count = tables.Column(verbose_name='SKUs')
+		dft_srf = tables.Column(verbose_name='Default Sales Rate Factor')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			exclude = ('id', 'description')
+		
+	related_tables = {'c_sales_periods': CustomerSalesPeriod, 'c_skus': CustomerSKUInfo}
+	class HotTable(HotDjango.ModelSerialiser):
+		class Meta:
+			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count', 'c_sales_periods', 'c_skus')
+
 class SalesPeriod(SkeletalDisplay.ModelDisplay):
 	model = m.SalesPeriod
-	extra_funcs= [('Period', 'str_simple_date')]
-	attached_tables = [{'name':'CustomerSalesPeriod', 'table': 'Table2', 'populate':'c_sales_periods', 'title':'Customers'}]
-	index = 6
-	addable = False
-	editable = False
-	deletable = False
+	display = False
+# 	extra_funcs= [('Period', 'str_simple_date')]
+# 	attached_tables = [{'name':'CustomerSalesPeriod', 'table': 'Table2', 'populate':'c_sales_periods', 'title':'Customers'}]
+# 	index = 6
+# 	addable = False
+# 	editable = False
+# 	deletable = False
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		str_simple_date = SkeletalDisplay.SelfLinkColumn(verbose_name='Period')

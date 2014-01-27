@@ -48,12 +48,20 @@
 * DONEfix and test Imex
 * DONE group orders and account for discount (remember minimum order)
 * DONE get lead time to work properly
-* get formsets working properly in all add/edit pages - 
+* DONE get formsets working properly in all add/edit pages - 
     * under each item (eg. customer) have buttons for mass edit of associated items - eg. customer-sku-info or customer-sales-periods only requires "add new item" feature as through can be defined a for all manytomany relationships
-    * Done use - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
+    * use - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
+* add buttons for simple relationships
 * get rid of "save required message after cancelling sub change" on hands on table
+* correct reload button on extra hot
+* call worker on customer update etc.
 * set some columns to readonly on hot
-* add buttons to hot form edit page
+* DONE add buttons to hot form edit page
+* fix crums - make shorter and prevent repeats
+* allow for comments above extra hot eg. "leave blank to use default"
+* add "changes will be lost" prompt on exiting edited extra hot
+* move edit buttons to be next to tables
+* think about output
 
 
 problem with calculating orders/lead times - if demand is based on order group assembly and customer are not known therefore can`t calculate lead time based on them
