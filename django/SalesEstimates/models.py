@@ -168,7 +168,7 @@ class SKUGroup(BasicModel):
         verbose_name = 'SKU Group'
 
 class SKU(BasicModel):
-    assemblies = models.ManyToManyField(Assembly, related_name='skus')
+    assemblies = models.ManyToManyField(Assembly, related_name='skus', verbose_name='Assemblies')
     dft_price = models.DecimalField('Default Sales Price', max_digits=11, decimal_places=2, null = True)
     dft_srf = models.FloatField('Default Sale Rate Factor', default = 1)
     dft_season_var = models.ForeignKey(SeasonalVariation, related_name='customers', verbose_name = 'Default Seasonal Variation')
