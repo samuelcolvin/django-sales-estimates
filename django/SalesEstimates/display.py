@@ -66,10 +66,12 @@ class Component(SkeletalDisplay.ModelDisplay):
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		name = SkeletalDisplay.SelfLinkColumn()
+		description = tables.Column(verbose_name='Description')
 		str_nominal_price = tables.Column(verbose_name='Nominal Price')
 		supply_lead_time = tables.Column(verbose_name='Supplier Lead Time')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			exclude = ('description', 'nominal_price', 'xl_id')
+			pass
+# 			exclude = ('nominal_price', 'xl_id')
 	
 	class HotTable(HotDjango.ModelSerialiser):
 		order_group = HotDjango.IDNameSerialiser(m.OrderGroup)
@@ -101,29 +103,18 @@ class Assembly(SkeletalDisplay.ModelDisplay):
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		name = SkeletalDisplay.SelfLinkColumn()
+		description = tables.Column(verbose_name='Description')
 		component_count = tables.Column(verbose_name='Components')
 		str_nominal_raw_cost = tables.Column(verbose_name='Nominal Cost')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			exclude = ('id', 'description')
+			pass
+# 			exclude = ('id')
 	
 	related_tables = {'assy_components': AssyComponent}
 	class HotTable(HotDjango.ModelSerialiser):
 # 		components = HotDjango.IDNameSerialiser(m.Component, many=True)
 		class Meta:
 			fields = ('id', 'name', 'description', 'comment', 'size', 'assy_components')
-
-class SKUGroup(SkeletalDisplay.ModelDisplay):
-	model = m.SKUGroup
-	index = 2.5
-	
-	class DjangoTable(SkeletalDisplay.Table):
-		name = SkeletalDisplay.SelfLinkColumn()
-		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			pass
-	
-	class HotTable(HotDjango.ModelSerialiser):
-		class Meta:
-			fields = ('id', 'name', 'description', 'comment')
 			
 class MonthSerialiser(serializers.WritableField):
 	read_only = False
@@ -179,6 +170,11 @@ class Promotion(SkeletalDisplay.ModelDisplay):
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass
 	
+	class HotTable(HotDjango.ModelSerialiser):
+		skus = HotDjango.IDNameSerialiser(m.SKU, many=True)
+		class Meta:
+			fields = ('id', 'name', 'srf', 'price_ratio', 'skus')
+	
 class SKU(SkeletalDisplay.ModelDisplay):
 	model = m.SKU
 	extra_funcs=[('Assemblies', 'assembly_count')]
@@ -187,12 +183,14 @@ class SKU(SkeletalDisplay.ModelDisplay):
 	
 	class DjangoTable(SkeletalDisplay.Table):
 		name = SkeletalDisplay.SelfLinkColumn()
+		description = tables.Column(verbose_name='Description')
 		assembly_count = tables.Column(verbose_name='Assemblies')
-		str_dft_price = tables.Column(verbose_name='Default Price')
-		str_nominal_raw_cost = tables.Column(verbose_name='Nominal Raw Cost')
+# 		str_dft_price = tables.Column(verbose_name='Default Price')
+# 		str_nominal_raw_cost = tables.Column(verbose_name='Nominal Raw Cost')
 		group = tables.Column(verbose_name='Group')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
-			exclude = ('id', 'description', 'dft_price')
+			pass
+# 			exclude = ('id', 'dft_price')
 	
 	class HotTable(HotDjango.ModelSerialiser):
 		group = HotDjango.IDNameSerialiser(m.SKUGroup)
@@ -201,6 +199,19 @@ class SKU(SkeletalDisplay.ModelDisplay):
 		class Meta:
 			fields = ('id', 'name', 'description', 'comment', 'dft_price', 'dft_srf', 'dft_season_var', 'group', 'assemblies')
 
+class SKUGroup(SkeletalDisplay.ModelDisplay):
+	model = m.SKUGroup
+	index = 3.5
+	
+	class DjangoTable(SkeletalDisplay.Table):
+		name = SkeletalDisplay.SelfLinkColumn()
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+	
+	class HotTable(HotDjango.ModelSerialiser):
+		class Meta:
+			fields = ('id', 'name', 'description', 'comment')
+			
 class CustomerSalesPeriod(SkeletalDisplay.ModelDisplay):
 	model = m.CustomerSalesPeriod
 	display = False

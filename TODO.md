@@ -51,9 +51,11 @@
 * DONE get formsets working properly in all add/edit pages - 
     * under each item (eg. customer) have buttons for mass edit of associated items - eg. customer-sku-info or customer-sales-periods only requires "add new item" feature as through can be defined a for all manytomany relationships
     * use - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
-* add buttons for simple relationships
+* DONE add buttons for simple relationships
+* consider cleaning up simple button save - move save into SimpleHandsontableDisplay
 * get rid of "save required message after cancelling sub change" on hands on table
 * correct reload button on extra hot
+* get _add_modify to use bulk edit/add
 * call worker on customer update etc.
 * set some columns to readonly on hot
 * DONE add buttons to hot form edit page
