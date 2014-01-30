@@ -5,6 +5,11 @@ class ManufacturerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
     
 admin.site.register(m.Manufacturer, ManufacturerAdmin)
+    
+class CostlevelsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'order_group', 'order_quantity', 'price')
+    
+admin.site.register(m.CostLevel, CostlevelsAdmin)
 
 class CostLevelInline(admin.TabularInline):
     model = m.CostLevel
@@ -29,7 +34,6 @@ class AssyComponentInline(admin.TabularInline):
 class AssemblyAdmin(admin.ModelAdmin):
     inlines = [AssyComponentInline]
     list_display = ('id', 'name', 'nominal_raw_cost', 'component_count')
-    exclude = ('components',)
 
 admin.site.register(m.Assembly, AssemblyAdmin)
 

@@ -20,7 +20,7 @@ class Manufacturer(SkeletalDisplay.ModelDisplay):
 	
 	class HotTable(HotDjango.ModelSerialiser):
 		class Meta:
-			fields = ('id', 'name', 'description')
+			fields = ('id', 'name', 'description', 'comment')
 
 class CostLevel(SkeletalDisplay.ModelDisplay):
 	model = m.CostLevel
@@ -242,6 +242,8 @@ class CustomerSalesPeriod(SkeletalDisplay.ModelDisplay):
 		promotion = HotDjango.IDNameSerialiser(m.Promotion)
 		class Meta:
 			fields = ('id', 'customer', 'period', 'store_count', 'promotion')
+			readonly = ('period',)
+			add_delete = False
 			
 class CustomerSKUInfo(SkeletalDisplay.ModelDisplay):
 	model = m.CustomerSKUInfo
@@ -293,7 +295,7 @@ class Customer(SkeletalDisplay.ModelDisplay):
 	related_tables = {'c_sales_periods': CustomerSalesPeriod, 'c_skus': CustomerSKUInfo}
 	class HotTable(HotDjango.ModelSerialiser):
 		class Meta:
-			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count', 'c_sales_periods', 'c_skus')
+			fields = ('id', 'name', 'description', 'comment', 'dft_srf', 'dft_store_count', 'c_skus')#, 'c_sales_periods'
 
 class SalesPeriod(SkeletalDisplay.ModelDisplay):
 	model = m.SalesPeriod

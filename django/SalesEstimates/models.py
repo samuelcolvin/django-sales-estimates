@@ -1,5 +1,6 @@
 from django.db import models
 import settings
+import SalesEstimates.worker.on_save as save_worker
 
 class BasicModel(models.Model):
     name = models.CharField(max_length=200, verbose_name='Name')
@@ -12,9 +13,31 @@ class BasicModel(models.Model):
     
     class Meta:
         abstract = True
+    
+    def __init__(self, *args, **kwargs):
+        super(BasicModel, self).__init__(*args, **kwargs)
+        self._change_values = {}
+        exclude = ('name', 'description', 'comment', 'xl_id')
+        for field in self._meta.fields:
+            if field.name not in exclude:
+                if hasattr(self, field.name):
+                    self._change_values[field.name] = getattr(self, field.name)
+    
+    hotsave_enabled = True
+    def save(self, *args, **kwargs):
+        hotsave = kwargs.pop('hotsave', False)
+        super(BasicModel, self).save(*args, **kwargs)
+        if not hotsave:
+            for field_name, value in self._change_values.items():
+                if getattr(self, field_name) != value:
+                    after_save()
+                    break
+        
+    @staticmethod
+    def after_save():
+        after_save()
         
 class Manufacturer(BasicModel):
-    pass
     class Meta:
         verbose_name_plural = 'Manufacturers'
         verbose_name = 'Manufacturer'
@@ -49,14 +72,22 @@ class CostLevel(models.Model):
     def str_price(self):
         return price_str(self.price)
     
+    hotsave_enabled = True
     def save(self, *args, **kwargs):
+        hotsave = kwargs.pop('hotsave', False)
         super(CostLevel, self).save(*args, **kwargs)
         if self.order_group.costlevels.count() > 0:
             min_cost_level = self.order_group.costlevels.order_by('order_quantity')[0]
             if min_cost_level.order_quantity < self.order_quantity:
                 return
         self.order_group.nominal_price = self.price
-        self.order_group.save()
+        self.order_group.save(hotsave = True)
+        if not hotsave:
+            after_save()
+            
+    @staticmethod
+    def after_save():
+        after_save()
     
     def __unicode__(self):
         return '%d: %s cost: %s @ %d units' % (self.id, self.order_group.name, price_str(self.price), self.order_quantity)
@@ -124,6 +155,17 @@ class AssyComponent(models.Model):
     class Meta:
         verbose_name_plural = 'Assembly Components'
         verbose_name = 'Assembly Component'
+        
+    hotsave_enabled = True
+    def save(self, *args, **kwargs):
+        hotsave = kwargs.pop('hotsave', False)
+        super(AssyComponent, self).save(*args, **kwargs)
+        if not hotsave:
+            after_save()
+        
+    @staticmethod
+    def after_save():
+        after_save()
 
 class SeasonalVariation(BasicModel):
     pass
@@ -159,6 +201,17 @@ class MonthVariation(models.Model):
     
     class Meta:
         unique_together = (('season_var', 'month'),)
+        
+    hotsave_enabled = True
+    def save(self, *args, **kwargs):
+        hotsave = kwargs.pop('hotsave', False)
+        super(MonthVariation, self).save(*args, **kwargs)
+        if not hotsave:
+            after_save()
+        
+    @staticmethod
+    def after_save():
+        after_save()
 
 class SKUGroup(BasicModel):
     pass
@@ -221,6 +274,16 @@ class Customer(BasicModel):
     class Meta:
         verbose_name_plural = 'Customers'
         verbose_name = 'Customer'
+    
+    def __init__(self, *args, **kwargs):
+        super(Customer, self).__init__(*args, **kwargs)
+        self.__orig_sc = self.dft_store_count
+    
+    def save(self, *args, **kwargs):
+        existing = self.id is not None
+        super(Customer, self).save(*args, **kwargs)
+        if not existing or self.__orig_sc != self.dft_store_count:
+            save_worker.update_csp(self.id, existing)
 
 class CustomerSKUInfo(models.Model):
     sku = models.ForeignKey(SKU, related_name='c_skus')
@@ -255,8 +318,10 @@ class CustomerSKUInfo(models.Model):
         super(CustomerSKUInfo, self).__init__(*args, **kwargs)
         self.__orig_srf = self.srf
     
+    hotsave_enabled = True
     def save(self, *args, **kwargs):
         resave = kwargs.pop('resave', False)
+        hotsave = kwargs.pop('hotsave', False)
         super(CustomerSKUInfo, self).save(*args, **kwargs)
         if resave:
             return
@@ -277,6 +342,12 @@ class CustomerSKUInfo(models.Model):
             editted = True
         if editted:
             self.save(resave = True)
+        if not hotsave:
+            after_save()
+        
+    @staticmethod
+    def after_save():
+        after_save()
 
 short_date_form = '%d-%b-%y'
 class SalesPeriod(models.Model):
@@ -299,7 +370,7 @@ class SalesPeriod(models.Model):
         return (self.finish_date - self.start_date).days
     
     def __unicode__(self):
-        return '%d: %s' % (self.id, self.str_simple_date())
+        return self.str_simple_date()
 
     class Meta:
         verbose_name_plural = 'Sales Periods'
@@ -323,8 +394,10 @@ class CustomerSalesPeriod(models.Model):
         return '%d: period from %s for %s, %s' % (self.id, self.period.start_date.strftime(settings.CUSTOM_DATE_FORMAT),
                                                       self.customer.name, s_count)
         
+    hotsave_enabled = True
     def save(self, *args, **kwargs):
         resave = kwargs.pop('resave', False)
+        hotsave = kwargs.pop('hotsave', False)
         super(CustomerSalesPeriod, self).save(*args, **kwargs)
         if resave:
             return
@@ -335,6 +408,12 @@ class CustomerSalesPeriod(models.Model):
         if self.store_count is None and self.customer.dft_store_count is not None:
             self.store_count = self.customer.dft_store_count
             self.save(resave = True)
+        if not hotsave:
+            after_save()
+        
+    @staticmethod
+    def after_save():
+        after_save()
     
     class Meta:
         verbose_name_plural = 'Customer Sales Periods'
@@ -402,3 +481,7 @@ class Demand(models.Model):
     class Meta:
         verbose_name_plural = 'Demands'
         verbose_name = 'Demand'
+        
+def after_save():
+    print 'running after_save'
+    save_worker.caculate_sales()

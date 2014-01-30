@@ -2,9 +2,9 @@ import Imex
 import models as m
 import openpyxl
 from django.db import models as db_models
-import worker
+import worker.actions
 
-PERFORM_BEFORE_UPLOAD = worker.delete_before_upload
+PERFORM_BEFORE_UPLOAD = worker.actions.delete_before_upload
         
 class Manufacturer(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields
@@ -28,9 +28,10 @@ class OrderGroup(Imex.ImExBase):
             for cl_head in self._CL_heads:
                 value = self._ws.cell(row=row, column=self._headings[cl_head]).value
                 if value is not None:
-                    m.CostLevel.objects.create(order_group=order_group, 
-                                               order_quantity = self._CL_heads[cl_head],
-                                               price=value)
+                    cl = m.CostLevel(order_group=order_group, 
+                                       order_quantity = self._CL_heads[cl_head],
+                                       price=value)
+                    cl.save(hotsave=True)
     
     class ExportExtra:
         def __init__(self, ws, firstcol):
@@ -103,8 +104,8 @@ class SeasonalVariation(Imex.ImExBase):
             for month_head, month in self._month_heads.items():
                 value = self._ws.cell(row=row, column=self._headings[month_head]).value
                 if value is not None:
-                    m.MonthVariation.objects.create(season_var=season_var, 
-                                               month = month, srf=value)
+                    mv = m.MonthVariation(season_var=season_var, month = month, srf=value)
+                    mv.save(hotsave=True)
     
     class ExportExtra:
         def __init__(self, ws, firstcol):

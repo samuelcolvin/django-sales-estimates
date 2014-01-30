@@ -123,7 +123,7 @@ string MySQL::add_customer_csp(int cust_id)
 	return out_stream.str();
 }
 
-string MySQL::update_cust_csp(int cust_id)
+string MySQL::update_customer_csp(int cust_id)
 {
 	ostringstream out_stream;
 	try {
@@ -502,7 +502,7 @@ BOOST_PYTHON_MODULE(worker)
         .def("generate_csp", &MySQL::generate_csp)
         .def("clear_csp", &MySQL::clear_csp)
         .def("add_customer_csp", &MySQL::add_customer_csp)
-        .def("update_cust_csp", &MySQL::update_cust_csp)
+        .def("update_customer_csp", &MySQL::update_customer_csp)
         .def("generate_skusales", &MySQL::generate_skusales)
         .def("calculate_demand", &MySQL::calculate_demand)
         .def("generate_orders", &MySQL::generate_orders)
