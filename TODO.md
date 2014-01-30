@@ -63,7 +63,7 @@
 * allow for comments above extra hot eg. "leave blank to use default"
 * add "changes will be lost" prompt on exiting edited extra hot
 * move edit buttons to be next to tables
-* add "calculate" button and make it green with after_save
+* DONE add "calculate" button and make it green with after_save
 * think about output
 * output excel report
 

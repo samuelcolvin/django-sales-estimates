@@ -12,3 +12,4 @@ djangorestframework
 markdown
 markdown2
 openpyxl
+django-debug-toolbar

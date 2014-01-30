@@ -15,14 +15,10 @@ urlpatterns = patterns('',
     url(r'^setup/(?P<model>\w+)$', views.SetupDisplayModel.as_view(), name='setup'),
     url(r'^setup/(?P<model>\w+)/(?P<id>\d+)$', views.SetupDisplayItem.as_view(), name='setup'),
     url(r'^generate$', views.Generate.as_view(), name='generate'),
-    url(r'^generate/(?P<command>\w+)$', views.Generate.as_view(), name='generate'),
     url(r'^results$', views.ResultsDisplayModel.as_view(), name='results'),
     url(r'^results/(?P<model>\w+)$', views.ResultsDisplayModel.as_view(), name='results'),
     url(r'^results/(?P<model>\w+)/(?P<id>\d+)$', views.ResultsDisplayItem.as_view(), name='results'),
-    
-#     url(r'^import$', 'ExcelImportExport.forms.upload', name='import'),
-#     url(r'^export$', imex_forms.Export.as_view(), name='export'),
-#     url(r'^export/(?P<command>\w+)$', imex_forms.Export.as_view(), name='export'),
+    url(r'^customers.json$', 'SalesEstimates.get_json.customer_json', name='customer_json'),
     url(r'^admin/', include(admin.site.urls)),
 )
 

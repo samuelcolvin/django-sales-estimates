@@ -1,6 +1,11 @@
 from django.contrib import admin
 import SalesEstimates.models as m
 
+class CompanyAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'results_status')
+    
+admin.site.register(m.Company, CompanyAdmin)
+
 class ManufacturerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
     

@@ -190,7 +190,7 @@ DISPLAY_APPS = ['SalesEstimates', 'Imex'] # 'SkeletalDisplay'
 HOT_PERMITTED_GROUPS = 'all'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
-# PAGE_BASE = 'page_base.html'
+PAGE_BASE = 'page_base.html'
 SK_VIEW_SETTINGS ={'viewname': 'setup', 'args2include': [False, True], 'base_name': 'Setup'}
 
 SITE_TITLE = 'childsfarm'
@@ -208,7 +208,7 @@ INTERNAL_IPS = ('127.0.0.1',)
 IMEX_APP = 'SalesEstimates'
 
 # Sales Estimates settings
-
+DEFAULT_COMPANY = 1
 # number of weeks demands are grouped into
 DEMAND_GROUPING = 13
 # general constant lead time in weeks
@@ -218,16 +218,12 @@ GENERAL_LEAD_TIME = 14
 SALES_PERIOD_START_DATE = '2014-01-01'
 SALES_PERIOD_FINISH_DATE = '2016-01-01'
 
+if DEBUG:
+	INSTALLED_APPS = tuple(list(INSTALLED_APPS) + ['debug_toolbar'])
+	MIDDLEWARE_CLASSES = tuple(list(MIDDLEWARE_CLASSES) + ['debug_toolbar.middleware.DebugToolbarMiddleware'])
 
-INSTALLED_APPS = tuple(list(INSTALLED_APPS) + ['debug_toolbar'])
-MIDDLEWARE_CLASSES = tuple(list(MIDDLEWARE_CLASSES) + ['debug_toolbar.middleware.DebugToolbarMiddleware'])
- 
-# DEBUG_TOOLBAR_CONFIG = {
-#     'SHOW_TOOLBAR_CALLBACK': lambda request: request.user.username == 'samuel'
-# }
- 
-DEBUG_TOOLBAR_PANELS = (
-    'debug_toolbar.panels.versions.VersionsPanel',
-    'debug_toolbar.panels.timer.TimerPanel',
-    'debug_toolbar.panels.profiling.ProfilingPanel',
-)
+	DEBUG_TOOLBAR_PANELS = (
+	    'debug_toolbar.panels.versions.VersionsPanel',
+	    'debug_toolbar.panels.timer.TimerPanel',
+	    'debug_toolbar.panels.profiling.ProfilingPanel',
+	)

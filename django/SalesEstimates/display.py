@@ -5,8 +5,21 @@ import SkeletalDisplay
 import SalesEstimates.models as m
 import HotDjango
 from rest_framework import serializers
+import settings
+from django.core.urlresolvers import reverse
 
 app_name='salesestimates'
+
+def extra_render(request):
+	status = m.Company.objects.get(id=settings.DEFAULT_COMPANY).results_status
+	extra_class = ''
+	if status != 0:
+		extra_class = 'pre-top-active'
+	pre_top = """
+<li class="pre-top %s">
+	<a href="%s" title="Update Results"><span class="glyphicon glyphicon-flash"></span></a>
+</li>""" % (extra_class, reverse('generate'))
+	return {'pre_top_menu': pre_top}
 
 class Manufacturer(SkeletalDisplay.ModelDisplay):
 	model = m.Manufacturer
@@ -83,7 +96,7 @@ class AssyComponent(SkeletalDisplay.ModelDisplay):
 	display = False
 	
 	class DjangoTable(SkeletalDisplay.Table):
-		component = tables.LinkColumn('process', kwargs={'model':'Component', 'id': A('component.id')}, verbose_name='Component')
+		component = tables.LinkColumn('setup', kwargs={'model':'Component', 'id': A('component.id')}, verbose_name='Component')
 		count = tables.Column(verbose_name='Count')
 		component_supplier_lead_time = tables.Column(verbose_name='Supplier Lead Time')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
@@ -329,5 +342,31 @@ class SKUSales(SkeletalDisplay.ModelDisplay):
 	class Table2(SkeletalDisplay.Table):
 		str_period = SkeletalDisplay.SelfLinkColumn(verbose_name='Period')
 		sales = tables.Column(verbose_name='Number of Sales')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+
+class Order(SkeletalDisplay.ModelDisplay):
+	model = m.Order
+ 	attached_tables = [{'name':'Demand', 'populate':'demands', 'title':'Demands Serviced'}]
+	
+	class DjangoTable(SkeletalDisplay.Table):
+		str_place_date = SkeletalDisplay.SelfLinkColumn(verbose_name='Date Placed')
+		order_group = tables.Column(verbose_name='Order Group')
+		str_items = tables.Column(verbose_name='Number of Items')
+		str_cost = tables.Column(verbose_name='Cost')
+		demand_count = tables.Column(verbose_name='Demands')
+		class Meta(SkeletalDisplay.ModelDisplayMeta):
+			pass
+
+class Demand(SkeletalDisplay.ModelDisplay):
+	model = m.Demand
+ 	display = False
+	
+	class DjangoTable(SkeletalDisplay.Table):
+		required_date = tables.Column(verbose_name='Date Required')
+		lead_time_total = tables.Column(verbose_name='Lead Time (days)')
+		str_simple_date = tables.Column(verbose_name='Period')
+		order_group = tables.Column(verbose_name='Order Group')
+		str_items = tables.Column(verbose_name='Number of Items')
 		class Meta(SkeletalDisplay.ModelDisplayMeta):
 			pass

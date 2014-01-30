@@ -11,7 +11,7 @@ from django.db import models as db_models
 import settings
 
 class Index(viewb.TemplateBase):
-    template_name = 'index.html'
+    template_name = 'sk_nvd3.html'
     side_menu = False
     all_auth_permitted = True
     
@@ -21,11 +21,10 @@ class Index(viewb.TemplateBase):
     
     def get_context_data(self, **kw):
         self._context['title'] = settings.SITE_TITLE
-        self._context['base_template'] = 'sk_page_base.html'
         return self._context
 
 class SetupDisplayModel(sk_views.DisplayModel):
-    top_active = 'process'
+    top_active = 'setup'
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
@@ -34,7 +33,7 @@ class SetupDisplayModel(sk_views.DisplayModel):
         super(SetupDisplayModel, self).setup_context(**kw)
         
 class SetupDisplayItem(sk_views.DisplayItem):
-    top_active = 'process'
+    top_active = 'setup'
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
@@ -42,52 +41,35 @@ class SetupDisplayItem(sk_views.DisplayItem):
 
 class Generate(viewb.TemplateBase):
     template_name = 'generate.html'
-    top_active = 'process'
+    top_active = None
     side_menu = False
-    worker_funcs={'gcsp': {'func': worker.generate_customer_sp, 'msg': 'Successfully Generated Customer Sales Periods'},
-                  'gskusales': {'func': worker.generate_skusales, 'msg': 'Successfully Generated Sales Estimates'}}
     
     def setup_context(self, **kw):
         super(Generate, self).setup_context(**kw)
     
     def get_context_data(self, **kw):
-        self._context['title'] = 'Generate Sales Estimates'
+        self._context['title'] = 'Generate Sales Estimates' 
+        self._context['pre_top_menu'] = self._context['pre_top_menu'].\
+            replace('class="pre-top', 'class="pre-top active')
         self._context['options'] = self.set_links()
-        self.choose_func(kw)
-        return self._context
-    
-    def set_links(self):
-        links= []
-        links.append({'url': reverse('generate', kwargs={'command': 'gcsp'}), 'name': 'Generate Customer Sales Periods (required after changes to Customers or Store Counts)'})
-        links.append({'url': reverse('generate', kwargs={'command': 'gskusales'}), 'name': 'Generate Sales Estimates (required after any other changes)'})
-        return links
-        
-    def choose_func(self, kw):
-        if 'command' in kw:
-            command = kw['command']
-            if command in self.worker_funcs:
-                self.do(**self.worker_funcs[command])
-            else:
-                name = self.__class__.__name__
-                self._context['errors'] = ['%s does not have function for command %s' % (name, command)]
-            
-    def do(self, func=None, msg=None):
         logger = SkeletalDisplay.Logger()
         try:
-            func(logger.addline)
+            worker.generate_skusales(logger.addline)
         except Exception, e:
             error_msg = 'ERROR: %s' % str(e)
             self._context['errors'] = [error_msg]
             print error_msg
             traceback.print_exc()
         else:
-            self._context['success'] = [msg]
+            self._context['success'] = ['Successfully Generated Sales Estimates']
+            self._context['pre_top_menu'] = self._context['pre_top_menu'].replace('pre-top-active', '')
         finally:
             self._context['info'] = logger.get_log()
-            
+        return self._context
 
+side_bar = ('Order', 'SKUGroup', 'SKU', 'Customer')
 class ResultsDisplayModel(sk_views.DisplayModel):
-    side_menu_items = ('SKUGroup', 'SKU', 'Customer')
+    side_menu_items = side_bar
     view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'results'}
     
     def setup_context(self, **kw):
@@ -97,8 +79,9 @@ class ResultsDisplayModel(sk_views.DisplayModel):
         super(ResultsDisplayModel, self).setup_context(**kw)
         
 class ResultsDisplayItem(sk_views.DisplayItem):
-    side_menu_items = ('SKUGroup', 'SKU', 'Customer')
+    side_menu_items = side_bar
     view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'results'}
+    custom_tables_below = True
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
@@ -107,8 +90,9 @@ class ResultsDisplayItem(sk_views.DisplayItem):
     def get_context_data(self, **kw):
         self._context = super(ResultsDisplayItem, self).get_context_data(**kw)
         del self._context['page_menu']
-        results_table = ResultsTable()
-        self._context['tables_below'] = results_table.populate_table(self._item)
+        if self._model_name != 'Order':
+            results_table = ResultsTable()
+            self._context['tables_below'] = results_table.populate_table(self._item)
         return self._context
 
 class DefaultMeta:
