@@ -98,7 +98,7 @@ class MySQL {
 
 	// to add all the csp's for a new customer, and update their store count for an existing one
 	string add_customer_csp(int);
-	string update_cust_csp(int);
+	string update_customer_csp(int);
 
 	// generate the actual sku sales estimates
 	string generate_skusales();

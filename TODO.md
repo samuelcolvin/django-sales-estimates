@@ -53,17 +53,23 @@
     * use - http://www.hoboes.com/Mimsy/hacks/replicating-djangos-admin/
 * DONE add buttons for simple relationships
 * consider cleaning up simple button save - move save into SimpleHandsontableDisplay
-* get rid of "save required message after cancelling sub change" on hands on table
-* correct reload button on extra hot
-* get _add_modify to use bulk edit/add
-* call worker on customer update etc.
-* set some columns to readonly on hot
+* DONE get rid of "save required" message after cancelling sub change on hands on table
+* DONE? correct reload button on extra hot
+* DONE (ish) get _add_modify to use bulk edit/add
+* DONE call worker on customer update etc.
+* DONE set some columns to readonly on hot
 * DONE add buttons to hot form edit page
 * fix crums - make shorter and prevent repeats
 * allow for comments above extra hot eg. "leave blank to use default"
 * add "changes will be lost" prompt on exiting edited extra hot
 * move edit buttons to be next to tables
+* add "calculate" button and make it green with after_save
 * think about output
+* output excel report
+
+### Later
+
+* change imex to use bulkcreate where there are no related items
 
 
 problem with calculating orders/lead times - if demand is based on order group assembly and customer are not known therefore can`t calculate lead time based on them

@@ -186,17 +186,18 @@ DATETIME_FORMAT = 'Y-m-d H:i:s'
 SHORT_DATETIME_FORMAT = DATETIME_FORMAT
 
 #Skeletal Dispaly Settings
-DISPLAY_APPS = ['SalesEstimates', 'SkeletalDisplay']
+DISPLAY_APPS = ['SalesEstimates', 'Imex'] # 'SkeletalDisplay'
 HOT_PERMITTED_GROUPS = 'all'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
-PAGE_BASE = 'page_base.html'
-SK_VIEW_SETTINGS ={'viewname': 'process', 'args2include': [False, True], 'base_name': 'Process'}
+# PAGE_BASE = 'page_base.html'
+SK_VIEW_SETTINGS ={'viewname': 'setup', 'args2include': [False, True], 'base_name': 'Setup'}
 
 SITE_TITLE = 'childsfarm'
-TOP_MENU = [{'url': 'process', 'name': 'Process'},
- 			{'url': 'imex_import', 'name': 'Import'}, 
-			{'url': 'imex_export', 'name': 'Export'}]
+TOP_MENU = [{'url': 'setup', 'name': 'Setup', 'glyph': 'cog'},
+			{'url': 'results', 'name': 'Results', 'glyph': 'fire'},
+ 			{'url': 'imex_import', 'name': 'Import', 'glyph': 'cloud-upload'}, 
+			{'url': 'imex_export', 'name': 'Export', 'glyph': 'cloud-download'}]
 LOGIN_REDIRECT_URL = '/'
 INTERNAL_IPS = ('127.0.0.1',)
 
@@ -216,3 +217,17 @@ GENERAL_LEAD_TIME = 14
 #sales period length on months
 SALES_PERIOD_START_DATE = '2014-01-01'
 SALES_PERIOD_FINISH_DATE = '2016-01-01'
+
+
+INSTALLED_APPS = tuple(list(INSTALLED_APPS) + ['debug_toolbar'])
+MIDDLEWARE_CLASSES = tuple(list(MIDDLEWARE_CLASSES) + ['debug_toolbar.middleware.DebugToolbarMiddleware'])
+ 
+# DEBUG_TOOLBAR_CONFIG = {
+#     'SHOW_TOOLBAR_CALLBACK': lambda request: request.user.username == 'samuel'
+# }
+ 
+DEBUG_TOOLBAR_PANELS = (
+    'debug_toolbar.panels.versions.VersionsPanel',
+    'debug_toolbar.panels.timer.TimerPanel',
+    'debug_toolbar.panels.profiling.ProfilingPanel',
+)

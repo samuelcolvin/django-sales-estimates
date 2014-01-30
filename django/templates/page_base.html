@@ -17,7 +17,9 @@
     <div class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         {% for item in top_menu %}
-		<li class="{{item.class}}"><a href="{{item.url}}">{{item.name}}</a></li>
+		<li class="{{item.class}}"><a href="{{item.url}}">{{item.name}}
+			{% if item.glyph %}&nbsp;<span class="glyphicon glyphicon-{{ item.glyph }}"></span> {% endif %}
+			</a></li>
 		{% endfor %}
       </ul>
     </div><!--/.navbar-collapse -->

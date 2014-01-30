@@ -4,23 +4,11 @@ import SkeletalDisplay.views_base as viewb
 import SkeletalDisplay.views as sk_views
 from django.core.urlresolvers import reverse
 import SkeletalDisplay
-import SalesEstimates.worker as worker
+import SalesEstimates.worker.actions as worker
 import traceback
 import SalesEstimates.models as m
 from django.db import models as db_models
 import settings
-
-class TabsMixin:
-    def generate_tabs(self, active):
-        tabs=[{'url': 'process', 'name': 'Setup', 'glyph': 'arrow-right'}]
-        tabs.append({'url': 'generate', 'name': 'Generate Sales Estimates', 'glyph': 'flash'})
-        tabs.append({'url': 'results', 'name': 'Results', 'glyph': 'fire'})
-        for tab in tabs:
-            if tab['url'] == active:
-                tab['class'] = 'active'
-            tab['url'] = reverse(tab['url'])
-        self._context['tabs'] = tabs
-        self.request.session['extra_context'] = {'tabs': tabs}
 
 class Index(viewb.TemplateBase):
     template_name = 'index.html'
@@ -36,7 +24,7 @@ class Index(viewb.TemplateBase):
         self._context['base_template'] = 'sk_page_base.html'
         return self._context
 
-class SetupDisplayModel(sk_views.DisplayModel, TabsMixin):
+class SetupDisplayModel(sk_views.DisplayModel):
     top_active = 'process'
     
     def setup_context(self, **kw):
@@ -44,17 +32,15 @@ class SetupDisplayModel(sk_views.DisplayModel, TabsMixin):
         if 'model' not in kw:
             kw['model'] = 'Manufacturer'
         super(SetupDisplayModel, self).setup_context(**kw)
-        self.generate_tabs('process')
         
-class SetupDisplayItem(sk_views.DisplayItem, TabsMixin):
+class SetupDisplayItem(sk_views.DisplayItem):
     top_active = 'process'
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
         super(SetupDisplayItem, self).setup_context(**kw)
-        self.generate_tabs('process')
 
-class Generate(viewb.TemplateBase, TabsMixin):
+class Generate(viewb.TemplateBase):
     template_name = 'generate.html'
     top_active = 'process'
     side_menu = False
@@ -63,7 +49,6 @@ class Generate(viewb.TemplateBase, TabsMixin):
     
     def setup_context(self, **kw):
         super(Generate, self).setup_context(**kw)
-        self.generate_tabs('generate')
     
     def get_context_data(self, **kw):
         self._context['title'] = 'Generate Sales Estimates'
@@ -101,25 +86,23 @@ class Generate(viewb.TemplateBase, TabsMixin):
             self._context['info'] = logger.get_log()
             
 
-class ResultsDisplayModel(sk_views.DisplayModel, TabsMixin):
+class ResultsDisplayModel(sk_views.DisplayModel):
     side_menu_items = ('SKUGroup', 'SKU', 'Customer')
-    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'process'}
+    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'results'}
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
         if 'model' not in kw:
             kw['model'] = 'SKUGroup'
         super(ResultsDisplayModel, self).setup_context(**kw)
-        self.generate_tabs('results')
         
-class ResultsDisplayItem(sk_views.DisplayItem, TabsMixin):
+class ResultsDisplayItem(sk_views.DisplayItem):
     side_menu_items = ('SKUGroup', 'SKU', 'Customer')
-    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'process'}
+    view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'results'}
     
     def setup_context(self, **kw):
         kw['app'] = 'salesestimates'
         super(ResultsDisplayItem, self).setup_context(**kw)
-        self.generate_tabs('results')
         
     def get_context_data(self, **kw):
         self._context = super(ResultsDisplayItem, self).get_context_data(**kw)
@@ -131,13 +114,12 @@ class ResultsDisplayItem(sk_views.DisplayItem, TabsMixin):
 class DefaultMeta:
     orderable = False
     attrs = {'class': 'table table-bordered table-condensed'}
-    per_page = 100
+    per_page = 500
 
 class ResultsTable:
     class DefaultTable(tables.Table):
         period = tables.Column()
         skus_sold = tables.Column(verbose_name='SKUs Sold')
-        cost = SkeletalDisplay.SterlingPriceColumn(verbose_name='Cost')
         income = SkeletalDisplay.SterlingPriceColumn(verbose_name='Income')
         Meta = DefaultMeta
             
@@ -166,20 +148,20 @@ class ResultsTable:
         csp = m.CustomerSalesPeriod.objects.filter(customer = customer).filter(period = sp)[0]
         row['store_count'] = csp.store_count
         sku_sales = m.SKUSales.objects.filter(period__period__id = sp.id, csku__customer__id=customer.id)
-        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
+        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), income = db_models.Sum('income'))
         row.update(info)
         return row
 
     def SKU(self, sp, sku):
         row={}
         sku_sales = m.SKUSales.objects.filter(period__period__id = sp.id, csku__sku__id=sku.id)
-        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
+        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), income = db_models.Sum('income'))
         row.update(info)
         return row
 
     def SKUGroup(self, sp, group):
         row={}
         sku_sales = m.SKUSales.objects.filter(period__period__id = sp.id, csku__sku__group__id=group.id)
-        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
+        info = sku_sales.aggregate(skus_sold = db_models.Sum('sales'), income = db_models.Sum('income'))
         row.update(info)
         return row
