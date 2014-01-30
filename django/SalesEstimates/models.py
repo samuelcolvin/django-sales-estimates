@@ -37,6 +37,23 @@ class BasicModel(models.Model):
     def after_save():
         after_save()
         
+class Company(models.Model):
+    name = models.CharField(max_length=200, verbose_name='Name')
+    description = models.TextField(null=True, blank=True, verbose_name='Description')
+    STATUSES=(
+        (0, 'Up to Date'),
+        (1, 'Update Required'),
+        (2, 'Error'),
+    )
+    results_status = models.IntegerField('Results Status', choices=STATUSES, default=0)
+    
+    def __unicode__(self):
+        return self.name
+    
+    class Meta:
+        verbose_name_plural = 'Companies'
+        verbose_name = 'Company'
+        
 class Manufacturer(BasicModel):
     class Meta:
         verbose_name_plural = 'Manufacturers'
@@ -447,7 +464,10 @@ class Order(models.Model):
     cost = models.DecimalField('Cost of Components', max_digits=11, decimal_places=4)
      
     def demand_count(self):
-        return self.demands.count() 
+        return self.demands.count()
+    
+    def str_items(self):
+        return ('%0.3f' % self.items).rstrip('0').rstrip('.')
      
     def str_cost(self):
         return price_str(self.cost)
@@ -456,9 +476,10 @@ class Order(models.Model):
         return self.place_date.strftime(settings.CUSTOM_DATE_FORMAT)
      
     def __unicode__(self):
-        return '%d: Order on %s: %d items costing %s' % (self.id, self.str_place_date(), self.items, self.str_cost())
+        return 'Order on %s for %s items' % (self.str_place_date(), self.str_items())
      
     class Meta:
+        ordering = ['place_date']
         verbose_name_plural = 'Orders'
         verbose_name = 'Order'
  
@@ -474,6 +495,9 @@ class Demand(models.Model):
     def str_simple_date(self):
         return '%s to %s' % (self.start_period.start_date.strftime(short_date_form),
                              self.end_period.finish_date.strftime(short_date_form))
+    
+    def str_items(self):
+        return ('%0.3f' % self.items).rstrip('0').rstrip('.')
      
     def __unicode__(self):
         return '%d: %s demands %d items' % (self.id, self.str_simple_date(), self.items)
@@ -484,4 +508,6 @@ class Demand(models.Model):
         
 def after_save():
     print 'running after_save'
-    save_worker.caculate_sales()
+    company = Company.objects.get(id=settings.DEFAULT_COMPANY)
+    company.results_status = 1
+    company.save()

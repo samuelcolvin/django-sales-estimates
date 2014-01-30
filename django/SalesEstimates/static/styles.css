@@ -11,3 +11,13 @@
 .option-group{
 	margin-bottom: 10px;
 }
+
+.pre-top > a {
+	font-size: 26px;
+	padding-top: 10px !important;
+	padding-bottom: 10px !important;
+}
+
+.pre-top-active > a {
+	color: #FD0 !important;
+}

@@ -48,17 +48,20 @@ def generate_sales_periods(log):
     m.SalesPeriod.objects.bulk_create(sp_to_add)
     log('created %d sales periods' % m.SalesPeriod.objects.count())
     
-def generate_customer_sp(log):
-    start = time()
-    mysql, msgs = _utils.get_con()
-    msgs += mysql.clear_csp()
-    msgs += mysql.generate_csp()
-    print msgs
-    [log(msg) for msg in msgs.split('\n')]
-    log('Time taken: %0.3f seconds' % (time() - start))
+# def generate_customer_sp(log):
+#     start = time()
+#     mysql, msgs = _utils.get_con()
+#     msgs += mysql.clear_csp()
+#     msgs += mysql.generate_csp()
+#     print msgs
+#     [log(msg) for msg in msgs.split('\n')]
+#     log('Time taken: %0.3f seconds' % (time() - start))
 
 def generate_skusales(log):
     msgs = _utils.generate_skusales()
+    company = m.Company.objects.get(id=settings.DEFAULT_COMPANY)
+    company.results_status = 0
+    company.save()
     print msgs
     [log(msg) for msg in msgs.split('\n')]
 
