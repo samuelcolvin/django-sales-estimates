@@ -5,9 +5,6 @@ from datetime import timedelta as td
 import SalesEstimates.models as m
 from django.db import models as db_models
 import inspect
-import decimal
-from django.db import transaction
-from time import time
 import _utils
 from django.db import connection
 
@@ -47,15 +44,6 @@ def generate_sales_periods(log):
             sp_to_add.append(sp)
     m.SalesPeriod.objects.bulk_create(sp_to_add)
     log('created %d sales periods' % m.SalesPeriod.objects.count())
-    
-# def generate_customer_sp(log):
-#     start = time()
-#     mysql, msgs = _utils.get_con()
-#     msgs += mysql.clear_csp()
-#     msgs += mysql.generate_csp()
-#     print msgs
-#     [log(msg) for msg in msgs.split('\n')]
-#     log('Time taken: %0.3f seconds' % (time() - start))
 
 def generate_skusales(log):
     msgs = _utils.generate_skusales()
@@ -72,7 +60,7 @@ def delete_before_upload(log):
 def clear_se(log):
     cursor = connection.cursor()
     for mod_name in dir(m):
-        if mod_name == 'User':
+        if mod_name in ['User', 'Company']:
             continue
         mod = getattr(m, mod_name)
         if inspect.isclass(mod)  and issubclass(mod, db_models.Model) and not mod._meta.abstract:

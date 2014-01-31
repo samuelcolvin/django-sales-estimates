@@ -11,7 +11,7 @@ from django.db import models as db_models
 import settings
 
 class Index(viewb.TemplateBase):
-    template_name = 'sk_nvd3.html'
+    template_name = 'index.html'
     side_menu = False
     all_auth_permitted = True
     
@@ -21,6 +21,19 @@ class Index(viewb.TemplateBase):
     
     def get_context_data(self, **kw):
         self._context['title'] = settings.SITE_TITLE
+        return self._context
+
+class Charts(viewb.TemplateBase):
+    template_name = 'sk_nvd3.html'
+    side_menu = False
+    all_auth_permitted = True
+    
+    def setup_context(self, **kw):
+        self.request.session['top_active'] = None
+        super(Charts, self).setup_context(**kw)
+    
+    def get_context_data(self, **kw):
+        self._context['title'] = 'Results'
         return self._context
 
 class SetupDisplayModel(sk_views.DisplayModel):

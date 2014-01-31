@@ -3,11 +3,17 @@ import sys
 
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
-ON_SERVER = False #'linux' in sys.platform.lower()
+ON_SERVER = False
+if 'linux' in sys.platform.lower():
+	import platform
+	if 'virtual' in platform.platform() or 'XDG_CURRENT_DESKTOP' not in os.environ:
+		ON_SERVER = True
+
 if ON_SERVER:
 	DEBUG = False
 else:
 	DEBUG = True
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (('Samuel Colvin', 'S@muelColvin.com'),)
@@ -18,8 +24,8 @@ if ON_SERVER:
 	DATABASES = {
 	    'default': {
 	        'ENGINE': 'django.db.backends.mysql',
-	        'NAME': 'scolvin_childsfarm',
-	        'USER': 'scolvin',
+	        'NAME': 'salesestimates',
+	        'USER': 'sales-user',
 	        'PASSWORD': 'Cg7GIzAq',
 	        'HOST': '',
 	        'PORT': '',
@@ -52,7 +58,7 @@ else:
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ['.sites.djangoeurope.com']
+ALLOWED_HOSTS = ['.sites.djangoeurope.com', '.scolvin.com']
 
 TIME_ZONE = 'Europe/London'
 
@@ -77,9 +83,11 @@ STATIC_ROOT = os.path.join(SITE_ROOT, 'static')
 MEDIA_URL = '/media/'
 MEDIA_RELATIVE_ROOT = 'media'
 MEDIA_ROOT = os.path.join(SITE_ROOT, MEDIA_RELATIVE_ROOT)
+SUB_SITE = ''
 if ON_SERVER:
-	SCRIPT_NAME = ''
-	FORCE_SCRIPT_NAME = ''
+	SUB_SITE = '/childsfarm'
+	STATIC_URL = '%s/static/' % SUB_SITE
+	MEDIA_URL = '%s/media/' % SUB_SITE
 
 STATICFILES_DIRS = ()
 
@@ -188,17 +196,18 @@ SHORT_DATETIME_FORMAT = DATETIME_FORMAT
 #Skeletal Dispaly Settings
 DISPLAY_APPS = ['SalesEstimates', 'Imex'] # 'SkeletalDisplay'
 HOT_PERMITTED_GROUPS = 'all'
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = '%s/login/' % SUB_SITE
+LOGIN_EXEMPT_URLS = ['login/']
+LOGIN_REDIRECT_URL = '%s/' % SUB_SITE
 PAGE_BASE = 'page_base.html'
 SK_VIEW_SETTINGS ={'viewname': 'setup', 'args2include': [False, True], 'base_name': 'Setup'}
 
 SITE_TITLE = 'childsfarm'
 TOP_MENU = [{'url': 'setup', 'name': 'Setup', 'glyph': 'cog'},
 			{'url': 'results', 'name': 'Results', 'glyph': 'fire'},
+			{'url': 'charts', 'name': 'Charts', 'glyph': 'star-empty'},
  			{'url': 'imex_import', 'name': 'Import', 'glyph': 'cloud-upload'}, 
 			{'url': 'imex_export', 'name': 'Export', 'glyph': 'cloud-download'}]
-LOGIN_REDIRECT_URL = '/'
 INTERNAL_IPS = ('127.0.0.1',)
 
 # HotDjango settings
@@ -218,7 +227,8 @@ GENERAL_LEAD_TIME = 14
 SALES_PERIOD_START_DATE = '2014-01-01'
 SALES_PERIOD_FINISH_DATE = '2016-01-01'
 
-if DEBUG:
+SHOW_PROFILER = False
+if DEBUG and SHOW_PROFILER:
 	INSTALLED_APPS = tuple(list(INSTALLED_APPS) + ['debug_toolbar'])
 	MIDDLEWARE_CLASSES = tuple(list(MIDDLEWARE_CLASSES) + ['debug_toolbar.middleware.DebugToolbarMiddleware'])
 
