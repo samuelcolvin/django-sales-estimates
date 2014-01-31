@@ -13,7 +13,7 @@ if ON_SERVER:
 	DEBUG = False
 else:
 	DEBUG = True
-DEBUG = True
+#DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (('Samuel Colvin', 'S@muelColvin.com'),)
