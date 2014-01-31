@@ -64,8 +64,9 @@
 * add "changes will be lost" prompt on exiting edited extra hot
 * move edit buttons to be next to tables
 * DONE add "calculate" button and make it green with after_save
-* think about output
-* output excel report
+* DONE output excel report
+* generated json in c++, add "loading" twirl on chart pages
+* add more charts
 
 ### Later
 
