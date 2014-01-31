@@ -471,9 +471,15 @@ class Order(models.Model):
      
     def str_cost(self):
         return price_str(self.cost)
+    
+    def float_cost(self):
+        return float(self.cost)
      
     def str_place_date(self):
         return self.place_date.strftime(settings.CUSTOM_DATE_FORMAT)
+    
+    def order_group_name(self):
+        return self.order_group.name
      
     def __unicode__(self):
         return 'Order on %s for %s items' % (self.str_place_date(), self.str_items())
@@ -495,6 +501,18 @@ class Demand(models.Model):
     def str_simple_date(self):
         return '%s to %s' % (self.start_period.start_date.strftime(short_date_form),
                              self.end_period.finish_date.strftime(short_date_form))
+        
+    def str_start(self):
+        return self.start_period.start_date.strftime(short_date_form)
+    
+    def str_end(self):
+        return self.start_period.finish_date.strftime(short_date_form)
+    
+    def order_id(self):
+        return self.order.id
+    
+    def order_group_name(self):
+        return self.order_group.name
     
     def str_items(self):
         return ('%0.3f' % self.items).rstrip('0').rstrip('.')

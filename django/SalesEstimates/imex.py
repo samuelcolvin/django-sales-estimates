@@ -5,16 +5,23 @@ from django.db import models as db_models
 import worker.actions
 
 PERFORM_BEFORE_UPLOAD = worker.actions.delete_before_upload
+
+IMPORT_GROUPS = (('settings', 'Import Settings'),)
+EXPORT_GROUPS = (('settings', 'Export Settings'), ('results', 'Export Results'))
         
 class Manufacturer(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields
     imex_order = 0
     main_model = m.Manufacturer
+    import_groups = ('settings',)
+    export_groups = ('settings',)
 
 class OrderGroup(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields + ['minimum_order', 'manufacturer']
     imex_order = 0
     main_model = m.OrderGroup
+    import_groups = ('settings',)
+    export_groups = ('settings',)
         
     class ImportExtra(Imex.ImportExtra):
         def __init__(self, ws, headings):
@@ -65,6 +72,8 @@ class Component(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields + ['supply_lead_time', 'order_group']
     imex_order = 1
     main_model = m.Component
+    import_groups = ('settings',)
+    export_groups = ('settings',)
     
     class ExportExtra(Imex.RedExtra):
         def __init__(self, *args, **kwargs):
@@ -75,22 +84,30 @@ class Component(Imex.ImExBase):
 class Assembly(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields + ['assembly_lead_time', 'size']
     imex_order = 2
-    main_model = m.Assembly    
+    main_model = m.Assembly
+    import_groups = ('settings',)
+    export_groups = ('settings',)
     
 class AssyComponent(Imex.ImExBase):
     imex_fields = ['xl_id', 'count', 'assembly', 'component']
     imex_order = 2.25
     main_model = m.AssyComponent
+    import_groups = ('settings',)
+    export_groups = ('settings',)
         
 class SKUGroup(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields
     imex_order = 2.5
     main_model = m.SKUGroup
+    import_groups = ('settings',)
+    export_groups = ('settings',)
 
 class SeasonalVariation(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields
     imex_order = 2.75
     main_model = m.SeasonalVariation
+    import_groups = ('settings',)
+    export_groups = ('settings',)
         
     class ImportExtra(Imex.ImportExtra):
         def __init__(self, ws, headings):
@@ -133,6 +150,8 @@ class SKU(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields + ['dft_price', 'dft_srf', 'dft_season_var', 'group']
     imex_order = 3
     main_model = m.SKU
+    import_groups = ('settings',)
+    export_groups = ('settings',)
     
     class ImportExtra(Imex.ImportM2MBase):
         m2m_field_name = 'assemblies'
@@ -151,6 +170,8 @@ class Promotion(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields + ['srf', 'price_ratio']
     imex_order = 3.5
     main_model = m.Promotion
+    import_groups = ('settings',)
+    export_groups = ('settings',)
     
     class ImportExtra(Imex.ImportM2MBase):
         m2m_field_name = 'skus'
@@ -167,11 +188,15 @@ class Customer(Imex.ImExBase):
     imex_fields = Imex.default_imex_fields + ['dft_srf', 'dft_store_count', 'delivery_lead_time']
     imex_order = 4
     main_model = m.Customer
+    import_groups = ('settings',)
+    export_groups = ('settings',)
                 
 class CustomerSKUInfo(Imex.ImExBase):
     imex_fields = ['xl_id', 'sku', 'customer', 'price', 'srf', 'custom_srf', 'season_var']
     imex_order = 5
     main_model = m.CustomerSKUInfo
+    import_groups = ('settings',)
+    export_groups = ('settings',)
     
     class ExportExtra(Imex.RedExtra):
         def __init__(self, *args, **kwargs):
@@ -188,6 +213,8 @@ class SalesPeriod(Imex.ImExBase):
     imex_order = 6
     import_sheet = False
     main_model = m.SalesPeriod
+    import_groups = ('settings',)
+    export_groups = ('settings',)
             
     class ExportExtra(Imex.RedExtra):
         def __init__(self, ws, firstcol):
@@ -198,134 +225,181 @@ class CustomerSalesPeriod(Imex.ImExBase):
     imex_fields = ['xl_id', 'customer', 'period', 'store_count', 'custom_store_count', 'promotion']
     imex_order = 7
     main_model = m.CustomerSalesPeriod
+    import_groups = ('settings',)
+    export_groups = ('settings',)
     
     class ExportExtra(Imex.RedExtra):
         def __init__(self, *args, **kwargs):
             self.lookups = [{'heading': 'Customer', 'sheet': 'Customer', 
                               'ref_col': CustomerSalesPeriod.imex_fields.index('customer')}]
             Imex.RedExtra.__init__(self, *args, **kwargs)
+     
+class Orders(Imex.ImExBase):
+    imex_fields = ['id']
+    imex_order = 0
+    main_model = m.Order
+    import_sheet = False
+    export_groups = ('results',)
+            
+    class ExportExtra(Imex.RedExtra):
+        print_color = 'BLACK'
+        lookups = [{'heading': 'Date Placed', 'func': 'str_place_date'},
+                    {'heading': 'Component Order Group', 'func': 'order_group_name'},
+                    {'heading': 'Items', 'func': 'str_items'},
+                    {'heading': 'Cost', 'func': 'float_cost'},
+                    ]
+        def add_headings(self, row):
+            Imex.RedExtra.add_headings(self, row)
+            for i in range(self._ws.get_highest_column()):
+                self._ws.column_dimensions[openpyxl.cell.get_column_letter(i + 1)].width = 25
+     
+class Demand(Imex.ImExBase):
+    imex_fields = ['id', 'str_start', 'str_end', 'lead_time_total', 'order_group_name']
+    field_headings = {'str_start': 'Start', 'str_end': 'End', 'str_items':'Items', 
+                    'lead_time_total': 'Lead Time (days)', 'order_group_name': 'Component Order Group'}
+    imex_order = 1
+    main_model = m.Demand
+    import_sheet = False
+    export_groups = ('results',)
+            
+    class ExportExtra(Imex.RedExtra):
+        print_color = 'BLACK'
+        lookups = []
+            
+        def add_headings(self, row):
+            Imex.RedExtra.add_headings(self, row)
+            for i in range(self._ws.get_highest_column()):
+                self._ws.column_dimensions[openpyxl.cell.get_column_letter(i + 1)].width = 25
+            
+class ResultExportExtra(Imex.RedExtra):
+    print_color = 'BLACK'
+    def __init__(self, *args, **kwargs):
+        self.lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
+        Imex.RedExtra.__init__(self, *args, **kwargs)
+              
+    def add_headings(self, row):
+        skus = m.SKU.objects.all().values_list('name', flat=True)
+        self._columns = [(i*2 + self._firstcol + len(self.lookups), c) for (i, c) in enumerate(skus)]
+        for (col, sku) in self._columns:
+            self._set_left_border(self._add_bold(0, col, sku))
+            self._ws.merge_cells(start_row=0, start_column=col, end_row=0, end_column=col+1)
+            self._set_bottom_border(self._add_bold(1, col, 'SKUs Sold'))
+            self._set_bottom_border(self._add_bold(1, col + 1, 'Income'))
+        self._columns_dict = {}
+        for (col, sku) in self._columns:
+            self._columns_dict[sku]= col
+        self._add_bold(0, 0, 'Sales Estimates').style.font.size = 14
+        Imex.RedExtra.add_headings(self, 1)
+        self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
+        self._set_bottom_border(self._ws.cell(row = 1, column = 0))
+        self._set_bottom_border(self._ws.cell(row = 1, column = 1))
+      
+    def add_row(self, sales_period, row):
+        for sku in m.SKU.objects.all():
+            col = self._columns_dict[sku.name]
+            c = self._ws.cell(row = row, column=col)
+            self._set_left_border(c)
+            sku_sales = m.SKUSales.objects.filter(period__period = sales_period, csku__sku=sku)
+            if sku_sales.count() == 0:
+                continue
+            info = sku_sales.aggregate(sales = db_models.Sum('sales'), income = db_models.Sum('income'))
+            self._ws.cell(row = row, column=col).value = info['sales']
+            self._ws.cell(row = row, column=col + 1).value = info['income']
+        Imex.RedExtra.add_row(self, sales_period, row)
+      
+    def _add_bold(self, row, col, value):
+        c = self._ws.cell(row = row, column=col)
+        c.value = value
+        c.style.font.bold = True
+        return c
     
-# class ResultsBySKU(Imex.ImExBase):
-#     imex_fields = ['xl_id']
-#     imex_order = 8
-#     main_model = m.SalesPeriod
-#     import_sheet = False
-#     imex_top_offset = 1
-#     
-#     class ExportExtra(Imex.RedExtra):
-#         def __init__(self, *args, **kwargs):
-#             self.lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
-#             Imex.RedExtra.__init__(self, *args, **kwargs)
-#                  
-#         def add_headings(self, row):
-#             skus = m.SKU.objects.all().values_list('name', flat=True)
-#             self._columns = [(i*3 + self._firstcol + len(self.lookups), c) for (i, c) in enumerate(skus)]
-#             for (col, sku) in self._columns:
-#                 self._set_left_border(self._add_bold(0, col, sku))
-#                 self._ws.merge_cells(start_row=0, start_column=col, end_row=0, end_column=col+2)
-#                 self._set_bottom_border(self._add_bold(1, col, 'SKUs Sold'))
-#                 self._set_bottom_border(self._add_bold(1, col + 1, 'Cost'))
-#                 self._set_bottom_border(self._add_bold(1, col + 2, 'Income'))
-#             self._columns_dict = {}
-#             for (col, sku) in self._columns:
-#                 self._columns_dict[sku]= col
-#             self._add_bold(0, 0, 'Sales Estimates').style.font.size = 14
-#             Imex.RedExtra.add_headings(self, 1)
-#             self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
-#             self._set_bottom_border(self._ws.cell(row = 1, column = 0))
-#             self._set_bottom_border(self._ws.cell(row = 1, column = 1))
-#          
-#         def add_row(self, sales_period, row):
-#             for sku in m.SKU.objects.all():
-#                 col = self._columns_dict[sku.name]
-#                 c = self._ws.cell(row = row, column=col)
-#                 self._set_left_border(c)
-#                 sku_sales = m.SKUSales.objects.filter(period__period = sales_period, csku__sku=sku)
-#                 if sku_sales.count() == 0:
-#                     continue
-#                 info = sku_sales.aggregate(sales = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
-#                 self._ws.cell(row = row, column=col).value = info['sales']
-#                 self._ws.cell(row = row, column=col + 1).value = info['cost']
-#                 self._ws.cell(row = row, column=col + 2).value = info['income']
-#             Imex.RedExtra.add_row(self, sales_period, row)
-#          
-#         def _add_bold(self, row, col, value):
-#             c = self._ws.cell(row = row, column=col)
-#             c.value = value
-#             c.style.font.bold = True
-#             return c
-#      
-#         def _set_left_border(self, cell):
-#             cell.style.borders.left.border_style = openpyxl.style.Border.BORDER_THIN
-#             return cell
-#          
-#         def _set_bottom_border(self, cell):
-#             cell.style.borders.bottom.border_style = openpyxl.style.Border.BORDER_THIN
-#             return cell
-#              
-#         def _set_red(self, cell):
-#             pass
-#     
-# class ResultsByCustomer(Imex.ImExBase):
-#     imex_fields = ['xl_id']
-#     imex_order = 7
-#     main_model = m.SalesPeriod
-#     import_sheet = False
-#     imex_top_offset = 1
-#     
-#     class ExportExtra(Imex.RedExtra):
-#         def __init__(self, *args, **kwargs):
-#             self.lookups = [{'heading': 'Period', 'func': 'str_simple_date'}]
-#             Imex.RedExtra.__init__(self, *args, **kwargs)
-#         
-#         def add_headings(self, row):
-#             customers = m.Customer.objects.all().values_list('name', flat=True)
-#             self._columns = [(i*4 + self._firstcol + len(self.lookups), c) for (i, c) in enumerate(customers)]
-#             for (col, customer) in self._columns:
-#                 self._set_left_border(self._add_bold(0, col, customer))
-#                 self._ws.merge_cells(start_row=0, start_column=col, end_row=0, end_column=col+3)
-#                 self._set_bottom_border(self._set_left_border(self._add_bold(1, col, 'Stores')))
-#                 self._set_bottom_border(self._add_bold(1, col + 1, 'SKUs Sold'))
-#                 self._set_bottom_border(self._add_bold(1, col + 2, 'Cost'))
-#                 self._set_bottom_border(self._add_bold(1, col + 3, 'Income'))
-#             self._columns_dict = {}
-#             for (col, customer) in self._columns:
-#                 self._columns_dict[customer]= col
-#             self._add_bold(0, 0, 'Sales Estimates').style.font.size = 14
-#             Imex.RedExtra.add_headings(self, 1)
-#             self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
-#             self._set_bottom_border(self._ws.cell(row = 1, column = 0))
-#             self._set_bottom_border(self._ws.cell(row = 1, column = 1))
-#          
-#         def add_row(self, sales_period, row):
-#             for csp in m.CustomerSalesPeriod.objects.filter(period = sales_period):
-#                 col = self._columns_dict[csp.customer.name]
-#                 c = self._ws.cell(row = row, column=col)
-#                 c.value = csp.store_count
-#                 self._set_left_border(c)
-#                 sku_sales = m.SKUSales.objects.filter(period = csp, csku__customer=csp.customer)
-#                 if sku_sales.count() == 0:
-#                     continue
-#                 info = sku_sales.aggregate(sales = db_models.Sum('sales'), cost = db_models.Sum('cost'), income = db_models.Sum('income'))
-#                 self._ws.cell(row = row, column=col + 1).value = info['sales']
-#                 self._ws.cell(row = row, column=col + 2).value = info['cost']
-#                 self._ws.cell(row = row, column=col + 3).value = info['income']
-#             Imex.RedExtra.add_row(self, sales_period, row)
-#          
-#         def _add_bold(self, row, col, value):
-#             c = self._ws.cell(row = row, column=col)
-#             c.value = value
-#             c.style.font.bold = True
-#             return c
-#      
-#         def _set_left_border(self, cell):
-#             cell.style.borders.left.border_style = openpyxl.style.Border.BORDER_THIN
-#             return cell
-#          
-#         def _set_bottom_border(self, cell):
-#             cell.style.borders.bottom.border_style = openpyxl.style.Border.BORDER_THIN
-#             return cell
-#              
-#         def _set_red(self, cell):
-#             pass
-#                     
+    def _set_left_border(self, cell):
+        cell.style.borders.left.border_style = openpyxl.style.Border.BORDER_THIN
+        return cell
+      
+    def _set_bottom_border(self, cell):
+        cell.style.borders.bottom.border_style = openpyxl.style.Border.BORDER_THIN
+        return cell
+          
+    def _set_red(self, cell):
+        pass
+     
+class ResultsByCustomer(Imex.ImExBase):
+    imex_fields = []
+    imex_order = 2
+    main_model = m.SalesPeriod
+    import_sheet = False
+    imex_top_offset = 1
+    export_groups = ('results',)
+     
+    class ExportExtra(ResultExportExtra):
+        def add_headings(self, row):
+            customers = m.Customer.objects.all().values_list('name', flat=True)
+            self._columns = [(i*3 + self._firstcol + len(self.lookups), c) for (i, c) in enumerate(customers)]
+            for (col, customer) in self._columns:
+                self._set_left_border(self._add_bold(0, col, customer))
+                self._ws.merge_cells(start_row=0, start_column=col, end_row=0, end_column=col+2)
+                self._set_bottom_border(self._set_left_border(self._add_bold(1, col, 'Stores')))
+                self._set_bottom_border(self._add_bold(1, col + 1, 'SKUs Sold'))
+                self._set_bottom_border(self._add_bold(1, col + 2, 'Income'))
+            self._columns_dict = {}
+            for (col, customer) in self._columns:
+                self._columns_dict[customer]= col
+            self._add_bold(0, 0, 'Sales Estimates').style.font.size = 14
+            Imex.RedExtra.add_headings(self, 1)
+            self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
+            self._set_bottom_border(self._ws.cell(row = 1, column = 0))
+            self._set_bottom_border(self._ws.cell(row = 1, column = 1))
+          
+        def add_row(self, sales_period, row):
+            for csp in m.CustomerSalesPeriod.objects.filter(period = sales_period):
+                col = self._columns_dict[csp.customer.name]
+                c = self._ws.cell(row = row, column=col)
+                c.value = csp.store_count
+                self._set_left_border(c)
+                sku_sales = m.SKUSales.objects.filter(period = csp, csku__customer=csp.customer)
+                if sku_sales.count() == 0:
+                    continue
+                info = sku_sales.aggregate(sales = db_models.Sum('sales'), income = db_models.Sum('income'))
+                self._ws.cell(row = row, column=col + 1).value = info['sales']
+                self._ws.cell(row = row, column=col + 2).value = info['income']
+            Imex.RedExtra.add_row(self, sales_period, row)
+    
+class ResultsBySKU(Imex.ImExBase):
+    imex_fields = []
+    imex_order = 3
+    main_model = m.SalesPeriod
+    import_sheet = False
+    imex_top_offset = 1
+    export_groups = ('results',)
+     
+    class ExportExtra(ResultExportExtra):
+        def add_headings(self, row):
+            skus = m.SKU.objects.all().values_list('name', flat=True)
+            self._columns = [(i*2 + self._firstcol + len(self.lookups), c) for (i, c) in enumerate(skus)]
+            for (col, sku) in self._columns:
+                self._set_left_border(self._add_bold(0, col, sku))
+                self._ws.merge_cells(start_row=0, start_column=col, end_row=0, end_column=col+1)
+                self._set_bottom_border(self._add_bold(1, col, 'SKUs Sold'))
+                self._set_bottom_border(self._add_bold(1, col + 1, 'Income'))
+            self._columns_dict = {}
+            for (col, sku) in self._columns:
+                self._columns_dict[sku]= col
+            self._add_bold(0, 0, 'Sales Estimates').style.font.size = 14
+            Imex.RedExtra.add_headings(self, 1)
+            self._ws.column_dimensions[openpyxl.cell.get_column_letter(self._firstcol+1)].width = 25
+            self._set_bottom_border(self._ws.cell(row = 1, column = 0))
+            self._set_bottom_border(self._ws.cell(row = 1, column = 1))
+          
+        def add_row(self, sales_period, row):
+            for sku in m.SKU.objects.all():
+                col = self._columns_dict[sku.name]
+                c = self._ws.cell(row = row, column=col)
+                self._set_left_border(c)
+                sku_sales = m.SKUSales.objects.filter(period__period = sales_period, csku__sku=sku)
+                if sku_sales.count() == 0:
+                    continue
+                info = sku_sales.aggregate(sales = db_models.Sum('sales'), income = db_models.Sum('income'))
+                self._ws.cell(row = row, column=col).value = info['sales']
+                self._ws.cell(row = row, column=col + 1).value = info['income']
+            Imex.RedExtra.add_row(self, sales_period, row)
