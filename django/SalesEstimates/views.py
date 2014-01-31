@@ -36,7 +36,11 @@ class Charts(viewb.TemplateBase):
         self._context['title'] = 'Results'
         return self._context
 
+setup_side_bar = ('Customer', 'OrderGroup', 'Assembly', 'CostLevel', 
+                  'SKU', 'Component', 'SeasonalVariation', 'SKUGroup', 
+                  'Promotion', 'Manufacturer')
 class SetupDisplayModel(sk_views.DisplayModel):
+    side_menu_items = setup_side_bar
     top_active = 'setup'
     
     def setup_context(self, **kw):
@@ -46,6 +50,7 @@ class SetupDisplayModel(sk_views.DisplayModel):
         super(SetupDisplayModel, self).setup_context(**kw)
         
 class SetupDisplayItem(sk_views.DisplayItem):
+    side_menu_items = setup_side_bar
     top_active = 'setup'
     
     def setup_context(self, **kw):
@@ -80,9 +85,9 @@ class Generate(viewb.TemplateBase):
             self._context['info'] = logger.get_log()
         return self._context
 
-side_bar = ('Order', 'SKUGroup', 'SKU', 'Customer')
+results_side_bar = ('Order', 'SKUGroup', 'SKU', 'Customer')
 class ResultsDisplayModel(sk_views.DisplayModel):
-    side_menu_items = side_bar
+    side_menu_items = results_side_bar
     view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'results'}
     
     def setup_context(self, **kw):
@@ -92,7 +97,7 @@ class ResultsDisplayModel(sk_views.DisplayModel):
         super(ResultsDisplayModel, self).setup_context(**kw)
         
 class ResultsDisplayItem(sk_views.DisplayItem):
-    side_menu_items = side_bar
+    side_menu_items = results_side_bar
     view_settings ={'viewname': 'results', 'args2include': [False, True], 'base_name': 'Results', 'top_active': 'results'}
     custom_tables_below = True
     
