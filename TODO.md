@@ -70,6 +70,7 @@
 ### Later
 
 * change imex to use bulkcreate where there are no related items
+* combine hot and skeletal
 
 
 problem with calculating orders/lead times - if demand is based on order group assembly and customer are not known therefore can`t calculate lead time based on them
