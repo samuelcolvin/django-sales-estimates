@@ -22,6 +22,12 @@ worker = Extension('worker',
                     libraries = ['mysqlcppconn', 'boost_python'],
                     sources = ['worker.cpp', 'worker_extra.cpp'],
                     extra_compile_args = ['-std=c++11'])
+local_libs = True
+if local_libs:
+    worker.include_dirs = ['/home/scolvin/cppconn/include', '/home/scolvin/boost']
+    worker.library_dirs = ['/home/scolvin/cppconn/lib', '/home/scolvin/boost/lib']
+    worker.extra_compile_args = ['-std=c++0x']
+
 
 setup (name = 'worker',
        version = VERSION,
